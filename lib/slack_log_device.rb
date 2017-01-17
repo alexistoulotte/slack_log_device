@@ -36,6 +36,8 @@ class SlackLogDevice
   end
 
   def write(message)
+    message = message.to_s.try(:strip)
+    return if message.blank?
     data = { 'text' => message.to_s }
     data['username'] = username if username.present?
     HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type': 'application/json' }, timeout: timeout)

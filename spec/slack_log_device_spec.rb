@@ -171,6 +171,21 @@ describe SlackLogDevice do
       logger.info('BIM!')
     end
 
+    it 'strips message' do
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM  !', 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      device.write("     BAM  !\n")
+    end
+
+    it 'does nothing if message is blank' do
+      expect(HTTParty).not_to receive(:post)
+      expect(device.write(" \n")).to be_nil
+    end
+
+    it 'does nothing if message is nil' do
+      expect(HTTParty).not_to receive(:post)
+      expect(device.write(nil)).to be_nil
+    end
+
     it 'send HTTP request if log level is higher to specified one' do
       expect(HTTParty).to receive(:post)
       logger.warn('BIM!')
