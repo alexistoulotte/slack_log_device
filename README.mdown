@@ -24,6 +24,19 @@ logger.warn('BAM!')
 
 Then, the logged message will be writen to webhook's configured channel.
 
+Note that the messages written are buffered in order to avoid consecutive
+request.
+
+## Options
+
+- `auto_flush`: To flush messages directly when a message is written (disabled
+by default).
+- `flush_delay`: The delay in seconds to flush messages (1 by default).
+- `max_buffer_size`: The max buffer size to flush messages (8192 by default).
+- `timeout`: The timeout in seconds to send message to slack (5 by default).
+- `username`: The username to post message as (nil by default).
+- `webhook_url`: The URL of the webhook (mandatory).
+
 ## Executing test suite
 
 This project is fully tested with [Rspec 3](http://github.com/rspec/rspec).

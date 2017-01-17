@@ -1,5 +1,6 @@
 .DS_Store
 /.bundle/
+/.byebug_history
 /.ruby-version
 /Gemfile.lock
 /pkg/
