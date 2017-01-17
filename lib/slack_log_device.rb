@@ -88,14 +88,10 @@ class SlackLogDevice
     @mutex.synchronize do
       @buffer << message
     end
-    if flush?
+    @flush_thread.kill if @flush_thread
+    @flush_thread = Thread.new do
+      sleep(flush_delay) unless auto_flush?
       flush
-    else
-      @flush_thread.kill if @flush_thread
-      @flush_thread = Thread.new do
-        sleep(flush_delay)
-        flush
-      end
     end
     nil
   end

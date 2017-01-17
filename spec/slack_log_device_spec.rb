@@ -356,6 +356,7 @@ describe SlackLogDevice do
     it 'does nothing if log level is lower than specified one' do
       expect(HTTParty).not_to receive(:post)
       logger.debug('BIM!')
+      device.flush
     end
 
     it 'strips message' do
@@ -363,9 +364,16 @@ describe SlackLogDevice do
       expect(device.instance_variable_get(:@buffer)).to eq(['BAM  !'])
     end
 
+    it 'converts message to string' do
+      device.write(42)
+      expect(device.instance_variable_get(:@buffer)).to eq(['42'])
+    end
+
     it 'does nothing if message is blank' do
       expect(HTTParty).not_to receive(:post)
-      expect(device.write(" \n")).to be_nil
+      expect {
+        expect(device.write(" \n")).to be_nil
+      }.not_to change { device.instance_variable_get(:@buffer) }
     end
 
     it 'does nothing if message is nil' do
@@ -384,12 +392,6 @@ describe SlackLogDevice do
       expect(HTTParty).to receive(:post)
       logger.warn('BIM!')
       device.flush
-    end
-
-    it 'flush if auto flush is true' do
-      options[:auto_flush] = true
-      expect(HTTParty).to receive(:post)
-      device.write('BAM!')
     end
 
     it 'does not post HTTP message if auto flush is false' do
