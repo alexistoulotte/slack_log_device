@@ -22,6 +22,7 @@ logger = Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/ser
 logger.level = Logger::INFO
 logger.warn('BAM!')
 ```
+Then, the logged message will be writen to webhook's configured channel.
 
 ## Executing test suite
 
