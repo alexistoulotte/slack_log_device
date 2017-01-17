@@ -1,0 +1,29 @@
+# SlackLogDevice
+
+LogDevice implementation that post logs on a Slack channel.
+
+## Setup
+
+Just add this into your `Gemfile`:
+
+```ruby
+gem 'slack_log_device'
+```
+
+Then, just run a `bundle install`.
+
+## Usage
+
+```ruby
+require 'logger'
+require 'slack_log_device'
+
+logger = Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/services/...', username: 'MyApp'))
+logger.level = Logger::INFO
+logger.warn('BAM!')
+```
+
+## Executing test suite
+
+This project is fully tested with [Rspec 3](http://github.com/rspec/rspec).
+Just run `bundle exec rake` (after a `bundle install`).
