@@ -37,6 +37,17 @@ by default).
 - `username`: The username to post message as (nil by default).
 - `webhook_url`: The URL of the webhook (mandatory).
 
+## Rails configuration
+
+For a rails application, it is recommanded to use following configuration into
+`config/environments/production.rb` file:
+
+```ruby
+config.logger = ActiveSupport::Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/services/...', username: 'MyRailsApp'))
+config.logger.formatter = ::Logger::Formatter.new
+config.log_level = :warn
+```
+
 ## Executing test suite
 
 This project is fully tested with [Rspec 3](http://github.com/rspec/rspec).
