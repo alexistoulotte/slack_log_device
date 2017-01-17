@@ -15,13 +15,13 @@ Then, just run a `bundle install`.
 ## Usage
 
 ```ruby
-require 'logger'
 require 'slack_log_device'
 
 logger = Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/services/...', username: 'MyApp'))
 logger.level = Logger::INFO
 logger.warn('BAM!')
 ```
+
 Then, the logged message will be writen to webhook's configured channel.
 
 ## Executing test suite
