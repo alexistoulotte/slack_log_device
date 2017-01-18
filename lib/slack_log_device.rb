@@ -5,14 +5,15 @@ require 'logger'
 
 class SlackLogDevice
 
-  attr_reader :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
+  attr_reader :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
 
   def initialize(options = {})
-    options.assert_valid_keys(:auto_flush, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url)
+    options.assert_valid_keys(:auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url)
     @buffer = []
     @mutex = Mutex.new
     @flush_thread
     self.auto_flush = options[:auto_flush]
+    self.channel = options[:channel]
     self.flush_delay = options.key?(:flush_delay) ? options[:flush_delay] : 1
     self.max_buffer_size = options.key?(:max_buffer_size) ? options[:max_buffer_size] : 8192
     self.timeout = options.key?(:timeout) ? options[:timeout] : 5
@@ -28,6 +29,12 @@ class SlackLogDevice
     @auto_flush = value.present?
   end
 
+  def channel=(value)
+    channel = value.to_s.presence
+    raise ArgumentError.new("Invalid channel specified: #{value.inspect}, it must start with # or @ and be in lower case with no spaces or special chars and its length must not exceed 22 chars") if channel && channel !~ /^[@#][a-z0-9_-]{1,21}$/
+    @channel = channel
+  end
+
   def close
     # Does nothing, this method must exist to consider the LogDevice as an IO.
   end
@@ -40,6 +47,7 @@ class SlackLogDevice
       @buffer.clear
     end
     data = { 'text' => message.to_s }
+    data['channel'] = channel if channel.present?
     data['username'] = username if username.present?
     begin
       HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type': 'application/json' }, timeout: timeout)

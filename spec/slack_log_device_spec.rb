@@ -34,6 +34,65 @@ describe SlackLogDevice do
 
   end
 
+  describe '#channel' do
+
+    it 'is null by default' do
+      options.delete(:channel)
+      expect(device.channel).to be_nil
+    end
+
+    it 'is nil if blank' do
+      options[:channel] = "  \n"
+      expect(device.channel).to be_nil
+    end
+
+    it 'can be set' do
+      expect {
+        device.channel = '#foo-bar_42abc'
+      }.to change { device.channel  }.from(nil).to('#foo-bar_42abc')
+    end
+
+    it 'raise an error if it contains spaces' do
+      expect {
+        device.channel = '#foo bar'
+      }.to raise_error(ArgumentError, 'Invalid channel specified: "#foo bar", it must start with # or @ and be in lower case with no spaces or special chars and its length must not exceed 22 chars')
+    end
+
+    it 'raise an error if it contains more than 22 chars (including #)' do
+      expect {
+        device.channel = "##{'a' * 22}"
+      }.to raise_error(ArgumentError)
+      device.channel = "##{'a' * 21}" # ok
+    end
+
+    it 'raise an error if it contains upper case letters' do
+      expect {
+        device.channel = '#Foo'
+      }.to raise_error(ArgumentError)
+    end
+
+    it 'raise an error if it contains special chars' do
+      expect {
+        device.channel = '#f{oo'
+      }.to raise_error(ArgumentError)
+    end
+
+    it 'raise an error if it does not start with a # or @' do
+      expect {
+        device.channel = 'foo'
+      }.to raise_error(ArgumentError)
+      device.channel = '#foo' # ok
+      device.channel = '@foo' # ok
+    end
+
+    it 'raise an error if it only contains prefix' do
+      expect {
+        device.channel = '#'
+      }.to raise_error(ArgumentError)
+    end
+
+  end
+
   describe '#flush' do
 
     it 'sends a post to webhook URL with given given message and specified username' do
@@ -46,6 +105,13 @@ describe SlackLogDevice do
       options.delete(:username)
       device.write('BAM!')
       expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!' }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      device.flush
+    end
+
+    it 'use specified channel' do
+      options[:channel] = '#foo'
+      device.write('BAM!')
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'channel': '#foo', 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
       device.flush
     end
 
@@ -155,7 +221,7 @@ describe SlackLogDevice do
     it 'raise an error if an invalid option is given' do
       expect {
         SlackLogDevice.new(foo: 'bar')
-      }.to raise_error(ArgumentError, "Unknown key: :foo. Valid keys are: :auto_flush, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url")
+      }.to raise_error(ArgumentError, "Unknown key: :foo. Valid keys are: :auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url")
     end
 
     it 'raise an error if webhook option is not given' do
