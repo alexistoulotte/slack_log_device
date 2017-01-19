@@ -3,11 +3,14 @@ require 'spec_helper'
 describe SlackLogDevice do
 
   let(:device) { SlackLogDevice.new(options) }
-  let(:logger) { Logger.new(device).tap { |logger| logger.level = Logger::INFO } }
   let(:options) { { username: 'MyApp', webhook_url: 'https://hooks.slack.com/services/test' } }
 
   before :each do
     allow(HTTParty).to receive(:post)
+  end
+
+  it 'is not a LogDevice instance' do
+    expect(device).not_to be_a(Logger::LogDevice)
   end
 
   describe '#auto_flush?' do
@@ -132,6 +135,16 @@ describe SlackLogDevice do
     it 'returns nil' do
       device.write('BIM!')
       expect(device.flush).to be_nil
+    end
+
+    it 'clears buffer' do
+      device.write('BAM!')
+      device.write('BIM!')
+      expect {
+        device.flush
+      }.to change { device.instance_variable_get(:@buffer) }.to([])
+      expect(HTTParty).not_to receive(:post)
+      device.flush
     end
 
   end
@@ -419,12 +432,6 @@ describe SlackLogDevice do
       expect(device.write('BAM!')).to be_nil
     end
 
-    it 'does nothing if log level is lower than specified one' do
-      expect(HTTParty).not_to receive(:post)
-      logger.debug('BIM!')
-      device.flush
-    end
-
     it 'strips message' do
       device.write("     BAM  !\n")
       expect(device.instance_variable_get(:@buffer)).to eq(['BAM  !'])
@@ -448,6 +455,23 @@ describe SlackLogDevice do
       expect(device.instance_variable_get(:@buffer)).to eq([])
     end
 
+    it 'does not post HTTP message if auto flush is false' do
+      expect(HTTParty).not_to receive(:post)
+      device.write('BAM!')
+    end
+
+  end
+
+  describe Logger, 'with slack log device' do
+
+    let(:logger) { Logger.new(device).tap { |logger| logger.level = Logger::INFO } }
+
+    it 'does nothing if log level is lower than specified one' do
+      expect(HTTParty).not_to receive(:post)
+      logger.debug('BIM!')
+      device.flush
+    end
+
     it 'send HTTP request if log level is equal to specified one' do
       expect(HTTParty).to receive(:post)
       logger.info('BIM!')
@@ -460,9 +484,42 @@ describe SlackLogDevice do
       device.flush
     end
 
-    it 'does not post HTTP message if auto flush is false' do
-      expect(HTTParty).not_to receive(:post)
-      device.write('BAM!')
+    describe '#close' do
+
+      it 'does not raise any error' do
+        expect {
+          logger.close
+        }.not_to raise_error
+      end
+
+    end
+
+    describe '#reopen' do
+
+      it 'does not raise any error' do
+        expect {
+          logger.reopen
+        }.not_to raise_error
+      end
+
+    end
+
+    describe '@logdev' do
+
+      let(:logdev) { logger.instance_variable_get(:@logdev) }
+
+      it 'is a LogDevice instance' do
+        expect(logdev).to be_a(Logger::LogDevice)
+      end
+
+      describe '#filename' do
+
+        it 'is nil' do
+          expect(logdev.filename).to be_nil
+        end
+
+      end
+
     end
 
   end
