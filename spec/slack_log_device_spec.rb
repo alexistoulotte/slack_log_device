@@ -512,6 +512,16 @@ describe SlackLogDevice do
         expect(logdev).to be_a(Logger::LogDevice)
       end
 
+      describe '#dev' do
+
+        let(:dev) { logdev.dev }
+
+        it 'is SlackLogDevice instance' do
+          expect(dev).to be(device)
+        end
+
+      end
+
       describe '#filename' do
 
         it 'is nil' do
