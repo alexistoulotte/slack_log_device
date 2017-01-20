@@ -41,7 +41,6 @@ class SlackLogDevice
   end
 
   def flush
-    kill_flush_thread
     return if @buffer.empty?
     message = ''
     @mutex.synchronize do
@@ -98,21 +97,12 @@ class SlackLogDevice
     @mutex.synchronize do
       @buffer << message
     end
-    kill_flush_thread
+    @flush_thread.kill if @flush_thread
     @flush_thread = Thread.new do
       sleep(flush_delay) unless auto_flush?
       flush
     end
     nil
-  end
-
-  private
-
-  def kill_flush_thread
-    if @flush_thread
-      @flush_thread.kill
-      @flush_thread = nil
-    end
   end
 
 end
