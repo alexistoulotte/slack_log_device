@@ -40,6 +40,15 @@ starting with a `@`).
 - `username`: The username to post message as (nil by default).
 - `webhook_url`: The URL of the webhook (mandatory).
 
+## Formatter
+
+`slack_log_device` provides a log formatter to have a pretty output for slack.
+It can be configured like this:
+
+```ruby
+logger.formatter = SlackLogDevice::FORMATTER
+```
+
 ## Rails configuration
 
 For a rails application, it is recommanded to use following configuration into

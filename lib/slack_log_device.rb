@@ -6,6 +6,21 @@ require 'logger'
 
 class SlackLogDevice
 
+  FORMATTER = -> (severity, datetime, progname, message) do
+    text = "*`#{severity}`*"
+    text << " (*#{progname}*)" if progname.present?
+    text << ': '
+    if message.is_a?(Exception)
+      text << "A `#{message.class}` occurred: #{message.message}\n\n```"
+      backtrace = message.backtrace.join("\n")
+      backtrace = backtrace[0, MAX_MESSAGE_LENGTH - 7 - text.size] << "\n..." if backtrace.size > MAX_MESSAGE_LENGTH - 3
+      text << backtrace << '```'
+    else
+      text << message
+    end
+  end
+  MAX_MESSAGE_LENGTH = 4000
+
   attr_reader :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
 
   def initialize(options = {})
