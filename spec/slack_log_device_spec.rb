@@ -247,8 +247,8 @@ describe SlackLogDevice do
 
   describe '#max_buffer_size' do
 
-    it 'is 8192 by default' do
-      expect(device.max_buffer_size).to eq(8192)
+    it 'is 128 kilobytes by default' do
+      expect(device.max_buffer_size).to eq(1024 * 128)
     end
 
     it 'can be specified' do
@@ -296,7 +296,7 @@ describe SlackLogDevice do
     it 'can be set' do
       expect {
         device.max_buffer_size = 1024
-      }.to change { device.max_buffer_size }.from(8192).to(1024)
+      }.to change { device.max_buffer_size }.from(1024 * 128).to(1024)
     end
 
   end

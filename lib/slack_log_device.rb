@@ -1,4 +1,5 @@
 require 'active_support/core_ext/hash'
+require 'active_support/core_ext/integer'
 require 'active_support/core_ext/string'
 require 'httparty'
 require 'logger'
@@ -15,7 +16,7 @@ class SlackLogDevice
     self.auto_flush = options[:auto_flush]
     self.channel = options[:channel]
     self.flush_delay = options.key?(:flush_delay) ? options[:flush_delay] : 1
-    self.max_buffer_size = options.key?(:max_buffer_size) ? options[:max_buffer_size] : 8192
+    self.max_buffer_size = options.key?(:max_buffer_size) ? options[:max_buffer_size] : 1024 * 128
     self.timeout = options.key?(:timeout) ? options[:timeout] : 5
     self.username = options[:username]
     self.webhook_url = options[:webhook_url]
