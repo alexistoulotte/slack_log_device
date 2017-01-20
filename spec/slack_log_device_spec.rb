@@ -159,6 +159,14 @@ describe SlackLogDevice do
       }.to change { device.flush? }.from(false).to(true)
     end
 
+    it 'use byte size to compare max_buffer_size' do
+      options[:max_buffer_size] = 10
+      device.write('0123456é')
+      expect {
+        device.instance_variable_get(:@buffer).push('a')
+      }.to change { device.flush? }.from(false).to(true)
+    end
+
     it 'is true if auto_flush option is present' do
       expect {
         device.auto_flush = true

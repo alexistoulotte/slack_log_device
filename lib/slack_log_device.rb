@@ -59,7 +59,7 @@ class SlackLogDevice
   end
 
   def flush?
-    auto_flush? || flush_delay.zero? || @buffer.join("\n").size > max_buffer_size
+    auto_flush? || flush_delay.zero? || @buffer.join("\n").bytesize > max_buffer_size
   end
 
   def flush_delay=(value)
