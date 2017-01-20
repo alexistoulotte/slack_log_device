@@ -52,7 +52,7 @@ class SlackLogDevice
     data['username'] = username if username.present?
     begin
       HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type': 'application/json' }, timeout: timeout)
-    rescue => e
+    rescue Exception => e
       STDERR.puts(e)
     end
     nil
