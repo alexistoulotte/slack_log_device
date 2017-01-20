@@ -13,7 +13,7 @@ class SlackLogDevice
     if message.is_a?(Exception)
       text << "A `#{message.class}` occurred: #{message.message}\n\n```"
       backtrace = message.backtrace.join("\n")
-      backtrace = backtrace[0, MAX_MESSAGE_LENGTH - 7 - text.size] << "\n..." if backtrace.size > MAX_MESSAGE_LENGTH - 3
+      backtrace = backtrace[0, MAX_MESSAGE_LENGTH - 6 - text.size] << "..." if backtrace.size > MAX_MESSAGE_LENGTH - 3
       text << backtrace << '```'
     else
       text << message

@@ -42,7 +42,7 @@ describe SlackLogDevice do
         exception.set_backtrace(['a' * 4500])
         message = formatter.call('DEBUG', Time.now, 'My App', exception)
         expect(message.size).to eq(4000)
-        expect(message).to end_with("aaaaaa\n...```")
+        expect(message).to end_with("aaaaaa...```")
       end
 
       it 'can be exactly 4000 chars (without three dots)' do
