@@ -144,35 +144,35 @@ describe SlackLogDevice do
 
     it 'sends a post to webhook URL with given given message and specified username' do
       device.write('BAM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
       device.flush
     end
 
     it 'does not send username if nil' do
       options.delete(:username)
       device.write('BAM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!' }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!' }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
       device.flush
     end
 
     it 'use specified channel' do
       options[:channel] = '#foo'
       device.write('BAM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'channel': '#foo', 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'channel' => '#foo', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
       device.flush
     end
 
     it 'use specified timeout' do
       options[:timeout] = 12
       device.write('BAM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 12)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 12)
       device.flush
     end
 
     it 'flushes all message writen separated by a new line' do
       device.write('BAM!')
       device.write('BIM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => "BAM!\nBIM!", 'username' => options[:username] }.to_json, headers: { 'Content-Type':  'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => "BAM!\nBIM!", 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
       device.flush
     end
 
@@ -541,16 +541,6 @@ describe SlackLogDevice do
       it 'does not raise any error' do
         expect {
           logger.close
-        }.not_to raise_error
-      end
-
-    end
-
-    describe '#reopen' do
-
-      it 'does not raise any error' do
-        expect {
-          logger.reopen
         }.not_to raise_error
       end
 

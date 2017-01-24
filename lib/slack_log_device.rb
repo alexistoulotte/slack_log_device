@@ -1,5 +1,4 @@
 require 'active_support/core_ext/hash'
-require 'active_support/core_ext/integer'
 require 'active_support/core_ext/string'
 require 'httparty'
 require 'logger'
@@ -66,7 +65,7 @@ class SlackLogDevice
     data['channel'] = channel if channel.present?
     data['username'] = username if username.present?
     begin
-      HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type': 'application/json' }, timeout: timeout)
+      HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: timeout)
     rescue Exception => e
       STDERR.puts(e)
     end
