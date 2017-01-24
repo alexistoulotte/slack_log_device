@@ -113,9 +113,13 @@ class SlackLogDevice
       @buffer << message
     end
     @flush_thread.kill if @flush_thread
-    @flush_thread = Thread.new do
-      sleep(flush_delay) unless auto_flush?
+    if flush?
       flush
+    else
+      @flush_thread = Thread.new do
+        sleep(flush_delay)
+        flush
+      end
     end
     nil
   end
