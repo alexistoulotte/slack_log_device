@@ -13,44 +13,191 @@ describe SlackLogDevice do
     expect(device).not_to be_a(Logger::LogDevice)
   end
 
-  describe '::FORMATTER' do
+  describe '::MAX_MESSAGE_LENGTH' do
 
-    let(:formatter) { SlackLogDevice::FORMATTER }
-
-    it 'returns a proc' do
-      expect(formatter).to be_a(Proc)
+    it 'is 4000' do
+      expect(SlackLogDevice::MAX_MESSAGE_LENGTH).to be(4000)
     end
 
-    describe '#call' do
+  end
 
-      it 'returns a formatted message' do
-        expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: Hello World')
+  describe '.formatter' do
+
+    context "if a block isn't given" do
+
+      let(:formatter) { SlackLogDevice.formatter }
+
+      it 'returns a proc' do
+        expect(formatter).to be_a(Proc)
       end
 
-      it 'includes progname if given' do
-        expect(formatter.call('DEBUG', Time.now, 'My App', 'Hello World')).to eq('*`DEBUG`* (*My App*): Hello World')
+      describe '#call' do
+
+        it 'returns a formatted message' do
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: Hello World')
+        end
+
+        it 'message is stripped' do
+          expect(formatter.call('DEBUG', Time.now, ' ', " \nHello World   ")).to eq('*`DEBUG`*: Hello World')
+        end
+
+        it 'message is converted to string' do
+          expect(formatter.call('DEBUG', Time.now, ' ', 42)).to eq('*`DEBUG`*: 42')
+        end
+
+        it 'includes progname if given' do
+          expect(formatter.call('DEBUG', Time.now, 'My App', 'Hello World')).to eq('*`DEBUG`* (*My App*): Hello World')
+        end
+
+        it 'formats exception' do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['foo', 'bar'])
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n```foo\nbar```")
+        end
+
+        it 'formats exception with no message' do
+          exception = RuntimeError.new(' ')
+          exception.set_backtrace(['foo', 'bar'])
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred:\n\n```foo\nbar```")
+        end
+
+        it 'formats exception with no backtrace' do
+          exception = RuntimeError.new('BAM!')
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        end
+
+        it 'strips exception message' do
+          exception = RuntimeError.new("  BAM!   \n")
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        end
+
+        it 'message never exceed 4000 chars (without exception)' do
+          message = formatter.call('DEBUG', Time.now, nil, 'Bam' * (SlackLogDevice::MAX_MESSAGE_LENGTH / 2))
+          expect(message).to end_with('BamBa')
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+        end
+
+        it "message never exceed #{SlackLogDevice::MAX_MESSAGE_LENGTH} chars (with exception)" do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['a' * (SlackLogDevice::MAX_MESSAGE_LENGTH - 49)])
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+          expect(message).to end_with("aaaaaa...```")
+        end
+
+        it "can be exactly #{SlackLogDevice::MAX_MESSAGE_LENGTH} chars with trace (without three dots)" do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['a' * (SlackLogDevice::MAX_MESSAGE_LENGTH - 50)])
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+          expect(message).to end_with('a```')
+        end
+
+        it "does not add three dots if less than #{SlackLogDevice::MAX_MESSAGE_LENGTH}" do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['a' * (SlackLogDevice::MAX_MESSAGE_LENGTH - 51)])
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH - 1)
+          expect(message).to end_with('a```')
+        end
+
+        it 'does not format backtrace if message is too long' do
+          exception = RuntimeError.new('BAM!' * SlackLogDevice::MAX_MESSAGE_LENGTH)
+          exception.set_backtrace(['hello world'])
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+          expect(message).not_to include('hello')
+          expect(message).not_to include('```')
+        end
+
+        it "message does not exceed #{SlackLogDevice::MAX_MESSAGE_LENGTH} if there is no backtrace" do
+          exception = RuntimeError.new('BAM!' * SlackLogDevice::MAX_MESSAGE_LENGTH)
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+        end
+
+        it 'does not formats a blank backtrace (due to large message)' do
+          exception = RuntimeError.new('a' * (SlackLogDevice::MAX_MESSAGE_LENGTH - 49))
+          exception.set_backtrace(['hello world'])
+          message = formatter.call('DEBUG', Time.now, nil, exception)
+          expect(message).not_to include('```')
+          expect(message).to end_with('a')
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH - 11)
+        end
+
       end
 
-      it 'formats exception' do
-        exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['foo', 'bar'])
-        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n```foo\nbar```")
+    end
+
+    context 'if a block is given' do
+
+      let(:formatter) { SlackLogDevice.formatter { |message| "#{message.reverse} Hey hoy" } }
+
+      it 'returns a proc' do
+        expect(formatter).to be_a(Proc)
       end
 
-      it 'message with trace never exceed 4000 chars' do
-        exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['a' * 4500])
-        message = formatter.call('DEBUG', Time.now, 'My App', exception)
-        expect(message.size).to eq(4000)
-        expect(message).to end_with("aaaaaa...```")
-      end
+      describe '#call' do
 
-      it 'can be exactly 4000 chars (without three dots)' do
-        exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['a' * 3950])
-        message = formatter.call('DEBUG', Time.now, nil, exception)
-        expect(message).to end_with('a```')
-        expect(message.size).to eq(4000)
+        it 'returns formatter message with block invoked' do
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: dlroW olleH Hey hoy")
+        end
+
+        it 'invokes block with stripped message' do
+          expect(formatter.call('DEBUG', Time.now, ' ', "    Hello World  \t")).to eq("*`DEBUG`*: dlroW olleH Hey hoy")
+        end
+
+        it 'does not append block message if blank' do
+          formatter = SlackLogDevice.formatter { '   ' }
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*:')
+        end
+
+        it 'converts block value to string' do
+          formatter = SlackLogDevice.formatter { 42 }
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: 42')
+        end
+
+        it 'is correct if block returns nil' do
+          formatter = SlackLogDevice.formatter { nil }
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*:')
+        end
+
+        it 'strips block return value' do
+          formatter = SlackLogDevice.formatter { "  hey \n" }
+          expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: hey')
+        end
+
+        it 'includes progname if given' do
+          expect(formatter.call('DEBUG', Time.now, 'MyApp', 'Hello World')).to eq("*`DEBUG`* (*MyApp*): dlroW olleH Hey hoy")
+        end
+
+        it 'formats exception' do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['foo', 'bar'])
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: !MAB Hey hoy\n\n```foo\nbar```")
+        end
+
+        it 'is correct with exception if block returns a blank message' do
+          formatter = SlackLogDevice.formatter { '    ' }
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['foo', 'bar'])
+          expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred:\n\n```foo\nbar```")
+        end
+
+        it "message never exceed #{SlackLogDevice::MAX_MESSAGE_LENGTH} chars (without exception)" do
+          message = formatter.call('DEBUG', Time.now, ' ', 'Hello World' * (SlackLogDevice::MAX_MESSAGE_LENGTH / 3))
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+          expect(message).to end_with('olleHdlroW o')
+        end
+
+        it 'message never exceed 4000 chars (with exception)' do
+          exception = RuntimeError.new('BAM!')
+          exception.set_backtrace(['a' * SlackLogDevice::MAX_MESSAGE_LENGTH])
+          message = formatter.call('DEBUG', Time.now, 'My App', exception)
+          expect(message.size).to eq(SlackLogDevice::MAX_MESSAGE_LENGTH)
+          expect(message).to end_with("aaaaaa...```")
+        end
+
       end
 
     end

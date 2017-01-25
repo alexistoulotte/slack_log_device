@@ -46,7 +46,14 @@ starting with a `@`).
 It can be configured like this:
 
 ```ruby
-logger.formatter = SlackLogDevice::FORMATTER
+logger.formatter = SlackLogDevice.formatter
+```
+
+`SlackLogDevice.formatter` method also accepts block to transform logged
+message, example:
+
+```ruby
+logger.formatter = SlackLogDevice.formatter { |message| message.reverse }
 ```
 
 ## Rails configuration

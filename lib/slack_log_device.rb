@@ -5,22 +5,35 @@ require 'logger'
 
 class SlackLogDevice
 
-  FORMATTER = -> (severity, datetime, progname, message) do
-    text = "*`#{severity}`*"
-    text << " (*#{progname}*)" if progname.present?
-    text << ': '
-    if message.is_a?(Exception)
-      text << "A `#{message.class}` occurred: #{message.message}\n\n```"
-      backtrace = message.backtrace.join("\n")
-      backtrace = backtrace[0, MAX_MESSAGE_LENGTH - 6 - text.size] << "..." if backtrace.size > MAX_MESSAGE_LENGTH - 3
-      text << backtrace << '```'
-    else
-      text << message
-    end
-  end
   MAX_MESSAGE_LENGTH = 4000
 
   attr_reader :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
+
+  def self.formatter(&block)
+    -> (severity, datetime, progname, message) do
+      text = "*`#{severity}`*"
+      text << " (*#{progname}*)" if progname.present?
+      text << ':'
+      if message.is_a?(Exception)
+        exception_message = message.message.to_s.strip
+        exception_message = yield(exception_message).to_s.strip if block_given?
+        text << " A `#{message.class}` occurred: #{exception_message}".rstrip
+        text = text[0, MAX_MESSAGE_LENGTH]
+        backtrace = message.backtrace.try(:join, "\n")
+        if backtrace.present? && (text.size + 12) <= MAX_MESSAGE_LENGTH
+          backtrace = backtrace[0, MAX_MESSAGE_LENGTH - 11 - text.size] << '...' if (backtrace.size + text.size + 8) > MAX_MESSAGE_LENGTH
+          text << "\n\n```" << backtrace << '```'
+        else
+          text
+        end
+      else
+        message = message.to_s.strip
+        message = yield(message).to_s.strip if block_given?
+        message = " #{message}".rstrip
+        text << message[0, MAX_MESSAGE_LENGTH - text.length]
+      end
+    end
+  end
 
   def initialize(options = {})
     options.assert_valid_keys(:auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url)
