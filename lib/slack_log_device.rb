@@ -13,7 +13,7 @@ class SlackLogDevice
 
   def initialize(options = {})
     options.assert_valid_keys(:auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url)
-    @buffer = []
+    @buffer = ''
     @mutex = Mutex.new
     @flush_thread
     self.auto_flush = options[:auto_flush]
@@ -47,8 +47,8 @@ class SlackLogDevice
     return if @buffer.empty?
     message = ''
     @mutex.synchronize do
-      message = @buffer.join("\n")
-      @buffer.clear
+      message = @buffer
+      @buffer = ''
     end
     data = { 'text' => message.to_s }
     data['channel'] = channel if channel.present?
@@ -62,7 +62,7 @@ class SlackLogDevice
   end
 
   def flush?
-    auto_flush? || flush_delay.zero? || @buffer.join("\n").bytesize > max_buffer_size
+    auto_flush? || flush_delay.zero? || @buffer.bytesize > max_buffer_size || @buffer.include?('```')
   end
 
   def flush_delay=(value)
@@ -98,6 +98,7 @@ class SlackLogDevice
     message = message.to_s.try(:strip)
     return if message.blank?
     @mutex.synchronize do
+      @buffer << "\n" unless @buffer.empty?
       @buffer << message
     end
     @flush_thread.kill if @flush_thread

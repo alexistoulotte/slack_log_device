@@ -19,7 +19,7 @@ class SlackLogDevice
       if message.is_a?(Exception)
         exception = message
         text << " A `#{message.class}` occurred: #{convert_message(exception.message)}".rstrip
-        text = truncate(text, MAX_MESSAGE_LENGTH)
+        text = truncate(text)
         text = append_metadata(text, exception)
         text = append_backtrace(text, exception)
       else
