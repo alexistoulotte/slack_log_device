@@ -56,6 +56,23 @@ message, example:
 logger.formatter = SlackLogDevice.formatter { |message| message.reverse }
 ```
 
+You can also add custom metadata to message sent to slack, here is how to do
+it:
+
+```ruby
+logger.formatter = SlackLogDevice.formatter(extra_metadata: {
+  'User' => -> (options) { ENV['USER'] },
+  'Machine' => `uname -a`,
+})
+```
+
+If you use [Ruby on Rails](http://rubyonrails.org/), you will get by default
+some metadata like current HTTP method, URL, remote address and User-Agent.
+
+If you need more, use `:extra_metadata` option. Note that blocks specified
+with `:extra_metadata` option are invoked with options that may contains
+`:request` option (if present).
+
 ## Rails configuration
 
 For a rails application, it is recommanded to use following configuration into
