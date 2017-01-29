@@ -146,7 +146,7 @@ describe SlackLogDevice do
     it 'flushes all message writen separated by a new line' do
       device.write('BAM!')
       device.write('BIM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => "BAM!\n\nBIM!", 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).twice
       device.flush
     end
 
@@ -160,7 +160,7 @@ describe SlackLogDevice do
       device.write('BIM!')
       expect {
         device.flush
-      }.to change { device.instance_variable_get(:@buffer) }.to('')
+      }.to change { device.instance_variable_get(:@buffer) }.to([])
       expect(HTTParty).not_to receive(:post)
       device.flush
     end
@@ -170,18 +170,11 @@ describe SlackLogDevice do
   describe '#flush?' do
 
     it 'is true if max_buffer_size is reached' do
-      options[:max_buffer_size] = 10
-      device.write('0123456789')
+      options[:max_buffer_size] = 2
+      device.write('hello')
+      device.write('world')
       expect {
-        device.instance_variable_get(:@buffer).send(:<<, 'a')
-      }.to change { device.flush? }.from(false).to(true)
-    end
-
-    it 'use byte size to compare max_buffer_size' do
-      options[:max_buffer_size] = 10
-      device.write('01234567é')
-      expect {
-        device.instance_variable_get(:@buffer).send(:<<, 'a')
+        device.instance_variable_get(:@buffer).send(:<<, 'foo')
       }.to change { device.flush? }.from(false).to(true)
     end
 
@@ -194,12 +187,6 @@ describe SlackLogDevice do
     it 'is true if flush delay is 0' do
       expect {
         device.flush_delay = 0
-      }.to change { device.flush? }.from(false).to(true)
-    end
-
-    it 'is true if it contains markdown code block' do
-      expect {
-        device.instance_variable_get(:@buffer).send(:<<, '```hello world```')
       }.to change { device.flush? }.from(false).to(true)
     end
 
@@ -279,8 +266,8 @@ describe SlackLogDevice do
 
   describe '#max_buffer_size' do
 
-    it 'is 128 kilobytes by default' do
-      expect(device.max_buffer_size).to eq(1024 * 128)
+    it 'is 10 by default' do
+      expect(device.max_buffer_size).to eq(10)
     end
 
     it 'can be specified' do
@@ -327,8 +314,8 @@ describe SlackLogDevice do
 
     it 'can be set' do
       expect {
-        device.max_buffer_size = 1024
-      }.to change { device.max_buffer_size }.from(1024 * 128).to(1024)
+        device.max_buffer_size = 42
+      }.to change { device.max_buffer_size }.from(10).to(42)
     end
 
   end
@@ -466,19 +453,19 @@ describe SlackLogDevice do
 
     it 'strips message' do
       device.write("     BAM  !\n")
-      expect(device.instance_variable_get(:@buffer)).to eq('BAM  !')
+      expect(device.instance_variable_get(:@buffer)).to eq(['BAM  !'])
     end
 
     it 'converts message to string' do
       device.write(42)
-      expect(device.instance_variable_get(:@buffer)).to eq('42')
+      expect(device.instance_variable_get(:@buffer)).to eq(['42'])
     end
 
     it 'adds given string to existing buffer with a two \n' do
       device.write('BAM!')
       expect {
         device.write('BIM!')
-      }.to change { device.instance_variable_get(:@buffer) }.from('BAM!').to("BAM!\n\nBIM!")
+      }.to change { device.instance_variable_get(:@buffer) }.from(['BAM!']).to(['BAM!', 'BIM!'])
     end
 
     it 'does nothing if message is blank' do
@@ -491,7 +478,7 @@ describe SlackLogDevice do
     it 'does nothing if message is nil' do
       expect(HTTParty).not_to receive(:post)
       expect(device.write(nil)).to be_nil
-      expect(device.instance_variable_get(:@buffer)).to eq('')
+      expect(device.instance_variable_get(:@buffer)).to eq([])
     end
 
     it 'does not post HTTP message if auto flush is false' do

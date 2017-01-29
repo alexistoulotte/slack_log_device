@@ -21,13 +21,12 @@ class SlackLogDevice
 
   def initialize(options = {})
     options.assert_valid_keys(:auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url)
-    @buffer = ''
+    @buffer = []
     @mutex = Mutex.new
-    @flush_thread
     self.auto_flush = options[:auto_flush]
     self.channel = options[:channel]
     self.flush_delay = options.key?(:flush_delay) ? options[:flush_delay] : 1
-    self.max_buffer_size = options.key?(:max_buffer_size) ? options[:max_buffer_size] : 1024 * 128
+    self.max_buffer_size = options.key?(:max_buffer_size) ? options[:max_buffer_size] : 10
     self.timeout = options.key?(:timeout) ? options[:timeout] : 5
     self.username = options[:username]
     self.webhook_url = options[:webhook_url]
@@ -52,25 +51,25 @@ class SlackLogDevice
   end
 
   def flush
-    return if @buffer.empty?
-    message = ''
-    @mutex.synchronize do
-      message = @buffer
-      @buffer = ''
-    end
-    data = { 'text' => message.to_s }
-    data['channel'] = channel if channel.present?
-    data['username'] = username if username.present?
-    begin
-      HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: timeout)
-    rescue Exception => e
-      STDERR.puts(e)
+    while !@buffer.empty? do
+      message = ''
+      @mutex.synchronize do
+        message = @buffer.pop
+      end
+      data = { 'text' => message.to_s }
+      data['channel'] = channel if channel.present?
+      data['username'] = username if username.present?
+      begin
+        HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: timeout)
+      rescue Exception => e
+        STDERR.puts(e)
+      end
     end
     nil
   end
 
   def flush?
-    auto_flush? || flush_delay.zero? || @buffer.bytesize > max_buffer_size || @buffer.include?('```')
+    auto_flush? || flush_delay.zero? || @buffer.size > max_buffer_size
   end
 
   def flush_delay=(value)
@@ -106,7 +105,6 @@ class SlackLogDevice
     message = message.to_s.try(:strip)
     return if message.blank?
     @mutex.synchronize do
-      @buffer << "\n\n" unless @buffer.empty?
       @buffer << message
     end
     @flush_thread.kill if @flush_thread

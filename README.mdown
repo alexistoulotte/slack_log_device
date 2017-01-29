@@ -35,7 +35,8 @@ by default).
 default). It can be a channel (if starting with `#`) or a specific user (if
 starting with a `@`).
 - `flush_delay`: The delay in seconds to send buffered messages (1 by default).
-- `max_buffer_size`: The max buffer size to flush messages (8192 by default).
+- `max_buffer_size`: The max messages count to flush them (10 messages by
+default).
 - `timeout`: The timeout in seconds to send message to slack (5 by default).
 - `username`: The username to post message as (nil by default).
 - `webhook_url`: The URL of the webhook (mandatory).
