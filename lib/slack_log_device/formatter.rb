@@ -72,7 +72,7 @@ class SlackLogDevice
       return nil if size_available < 11
       options = {}
       options[:exception] = message if message.is_a?(Exception)
-      request = options[:exception].present? ? options[:exception].instance_variable_get(:@__slack_log_device_request) : nil
+      request = Thread.current[:slack_log_device_request]
       options[:request] = request if request.present?
       text = default_metadata(request).merge(extra_metadata).map do |name, value|
         value = value.call(options) if value.respond_to?(:call)

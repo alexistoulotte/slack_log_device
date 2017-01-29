@@ -66,8 +66,9 @@ logger.formatter = SlackLogDevice.formatter(extra_metadata: {
 })
 ```
 
-If you use [Ruby on Rails](http://rubyonrails.org/), you will get by default
-some metadata like current HTTP method, URL, remote address and User-Agent.
+If you use [Ruby on Rails](http://rubyonrails.org/), you will get some
+metadata like current HTTP method, URL, remote address and User-Agent (see
+Rails configuration section).
 
 If you need more, use `:extra_metadata` option. Note that blocks specified
 with `:extra_metadata` option are invoked with options that may contains
@@ -79,10 +80,14 @@ For a rails application, it is recommanded to use following configuration into
 `config/environments/production.rb` file:
 
 ```ruby
+SlackLogDevice.enable_rails_logging!
 config.logger = ActiveSupport::Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/services/...', username: 'MyRailsApp'))
 config.logger.formatter = SlackLogDevice::FORMATTER
 config.log_level = :warn
 ```
+
+`SlackLogDevice.enable_rails_logging!` instruction put current request into
+thread in order to make it available by slack formatter.
 
 ## Executing test suite
 

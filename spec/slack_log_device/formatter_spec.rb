@@ -237,11 +237,19 @@ describe SlackLogDevice::Formatter do
 
     end
 
-    context 'with an exception with @__slack_log_device_request set' do
+    context 'with request set in current thread' do
 
-      let(:exception) { RuntimeError.new('BAM!').tap { |e| e.instance_variable_set(:@__slack_log_device_request, request) } }
+      let(:exception) { RuntimeError.new('BAM!') }
       let(:formatter) { SlackLogDevice::Formatter.new }
       let(:request) { double(remote_addr: '127.0.0.1', user_agent: 'Mozilla', method: 'GET', url: 'http://google.com') }
+
+      before :each do
+        Thread.current[:slack_log_device_request] = request
+      end
+
+      after :each do
+        Thread.current[:slack_log_device_request] = nil
+      end
 
       it 'logs metadata' do
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n• *Method*: `GET`\n• *URL*: `http://google.com`\n• *Remote address*: `127.0.0.1`\n• *User-Agent*: `Mozilla`")

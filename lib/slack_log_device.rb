@@ -7,6 +7,14 @@ class SlackLogDevice
 
   attr_reader :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
 
+  def self.enable_rails_logging!
+    require 'slack_log_device/debug_exceptions'
+    require 'slack_log_device/set_request_in_thread'
+    ActionDispatch::DebugExceptions.prepend(SlackLogDevice::DebugExceptions)
+    Rails.application.config.middleware.insert_before(Rails::Rack::Logger, SlackLogDevice::SetRequestInThread)
+    true
+  end
+
   def self.formatter(options = {}, &block)
     Formatter.new(options, &block)
   end
@@ -98,7 +106,7 @@ class SlackLogDevice
     message = message.to_s.try(:strip)
     return if message.blank?
     @mutex.synchronize do
-      @buffer << "\n" unless @buffer.empty?
+      @buffer << "\n\n" unless @buffer.empty?
       @buffer << message
     end
     @flush_thread.kill if @flush_thread
@@ -115,9 +123,4 @@ class SlackLogDevice
 
 end
 
-require 'slack_log_device/rails_exceptions_logging'
 require 'slack_log_device/formatter'
-
-if defined?(ActionDispatch::DebugExceptions)
-  ActionDispatch::DebugExceptions.prepend(SlackLogDevice::RailsExceptionsLogging)
-end

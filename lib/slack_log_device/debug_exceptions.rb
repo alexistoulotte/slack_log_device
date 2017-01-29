@@ -1,6 +1,6 @@
 class SlackLogDevice
 
-  module RailsExceptionsLogging
+  module DebugExceptions
 
     def log_error(request, wrapper)
       logger = logger(request)

@@ -146,7 +146,7 @@ describe SlackLogDevice do
     it 'flushes all message writen separated by a new line' do
       device.write('BAM!')
       device.write('BIM!')
-      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => "BAM!\nBIM!", 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => "BAM!\n\nBIM!", 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
       device.flush
     end
 
@@ -474,11 +474,11 @@ describe SlackLogDevice do
       expect(device.instance_variable_get(:@buffer)).to eq('42')
     end
 
-    it 'adds given string to existing buffer with a \n' do
+    it 'adds given string to existing buffer with a two \n' do
       device.write('BAM!')
       expect {
         device.write('BIM!')
-      }.to change { device.instance_variable_get(:@buffer) }.from('BAM!').to("BAM!\nBIM!")
+      }.to change { device.instance_variable_get(:@buffer) }.from('BAM!').to("BAM!\n\nBIM!")
     end
 
     it 'does nothing if message is blank' do
