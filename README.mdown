@@ -83,7 +83,7 @@ For a rails application, it is recommanded to use following configuration into
 ```ruby
 SlackLogDevice.enable_rails_logging!
 config.logger = ActiveSupport::Logger.new(SlackLogDevice.new(webhook_url: 'https://hooks.slack.com/services/...', username: 'MyRailsApp'))
-config.logger.formatter = SlackLogDevice::FORMATTER
+config.logger.formatter = SlackLogDevice.formatter
 config.log_level = :warn
 ```
 
