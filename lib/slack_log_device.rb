@@ -30,6 +30,7 @@ class SlackLogDevice
     self.timeout = options.key?(:timeout) ? options[:timeout] : 5
     self.username = options[:username]
     self.webhook_url = options[:webhook_url]
+    at_exit { flush }
   end
 
   def auto_flush?
@@ -56,6 +57,7 @@ class SlackLogDevice
       @mutex.synchronize do
         message = @buffer.pop
       end
+      next if message.blank?
       data = { 'text' => message.to_s }
       data['channel'] = channel if channel.present?
       data['username'] = username if username.present?
