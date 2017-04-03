@@ -247,10 +247,6 @@ describe SlackLogDevice::Formatter do
         Thread.current[:slack_log_device_request] = request
       end
 
-      after :each do
-        Thread.current[:slack_log_device_request] = nil
-      end
-
       it 'logs metadata' do
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n• *Method*: `GET`\n• *URL*: `http://google.com`\n• *Remote address*: `127.0.0.1`\n• *User-Agent*: `Mozilla`")
       end

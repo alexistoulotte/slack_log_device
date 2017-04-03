@@ -5,10 +5,6 @@ describe SlackLogDevice do
   let(:device) { SlackLogDevice.new(options) }
   let(:options) { { username: 'MyApp', webhook_url: 'https://hooks.slack.com/services/test' } }
 
-  before :each do
-    allow(HTTParty).to receive(:post)
-  end
-
   it 'is not a LogDevice instance' do
     expect(device).not_to be_a(Logger::LogDevice)
   end
