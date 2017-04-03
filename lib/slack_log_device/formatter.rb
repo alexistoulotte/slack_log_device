@@ -9,7 +9,7 @@ class SlackLogDevice
     def initialize(options = {}, &block)
       options.assert_valid_keys(:extra_metadata)
       @extra_metadata = options.key?(:extra_metadata) ? options[:extra_metadata] : {}
-      @message_conveter = block_given? ? Proc.new(&block) : -> (message) { message }
+      @message_converter = block_given? ? Proc.new(&block) : -> (message) { message }
     end
 
     def call(severity, datetime, progname, message)
@@ -44,7 +44,7 @@ class SlackLogDevice
     end
 
     def convert_message(message)
-      @message_conveter.call(message.to_s.strip).to_s.strip
+      @message_converter.call(message.to_s.strip).to_s.strip
     end
 
     def default_metadata(request)
