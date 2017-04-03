@@ -30,7 +30,7 @@ class SlackLogDevice
     self.timeout = options.key?(:timeout) ? options[:timeout] : 5
     self.username = options[:username]
     self.webhook_url = options[:webhook_url]
-    at_exit { flush }
+    at_exit { flush } unless Thread.current.key?(:__rspec)
   end
 
   def auto_flush?
