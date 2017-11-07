@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.executables = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ['lib']
 
-  s.required_ruby_version = '>= 2.0.0'
+  s.required_ruby_version = '>= 2.1.0'
 
   s.add_dependency 'activesupport', '>= 4.1.0', '< 6.0.0'
   s.add_dependency 'httparty', '>= 0.14.0', '< 0.16.0'

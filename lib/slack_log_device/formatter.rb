@@ -18,10 +18,11 @@ class SlackLogDevice
       text << ':'
       if message.is_a?(Exception)
         exception = message
-        text << " A `#{message.class}` occurred: #{convert_message(exception.message)}".rstrip
+        text << " A `#{exception.class}` occurred: #{convert_message(exception.message)}".rstrip
         text = truncate(text)
         text = append_metadata(text, exception)
-        text = append_backtrace(text, exception)
+        text = append_exception_backtrace(text, exception)
+        text = append_exception_cause(text, exception)
       else
         text << " #{convert_message(message)}".rstrip
         text = append_metadata(text, message)
@@ -31,16 +32,24 @@ class SlackLogDevice
 
     private
 
-    def append_backtrace(text, exception)
+    def append_exception_backtrace(text, exception)
       backtrace = format_backtrace(exception, MAX_MESSAGE_LENGTH - text.size - 2)
-      text << "\n\n" << backtrace if backtrace.present?
-      text
+      backtrace.present? ? "#{text}\n\n#{backtrace}" : text
+    end
+
+    def append_exception_cause(text, exception)
+      cause = exception.cause
+      return text if cause.nil?
+      message = "\n\nCaused by `#{exception.class}`"
+      return text if (text + message).size > MAX_MESSAGE_LENGTH
+      text = truncate("#{text}#{message}: #{exception.message}")
+      text = append_exception_backtrace(text, cause)
+      append_exception_cause(text, cause)
     end
 
     def append_metadata(text, message)
       metadata = format_metadata(message, MAX_MESSAGE_LENGTH - text.size - 2)
-      text << "\n\n" << metadata if metadata.present?
-      text
+      metadata.present? ? "#{text}\n\n#{metadata}" : text
     end
 
     def convert_message(message)

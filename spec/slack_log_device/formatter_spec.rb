@@ -126,6 +126,25 @@ describe SlackLogDevice::Formatter do
         expect(message).to end_with("aaa\n\n```h...```")
       end
 
+      it 'formats exception cause' do
+        exception = nil
+        begin
+          begin
+            raise 'BIM!'
+          rescue => e
+            raise 'BAM!'
+          end
+        rescue => e
+          e.set_backtrace(['this is the backtrace'])
+          exception = e
+        end
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message.size).to eq(max_message_length)
+        expect(message).to include("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        expect(message).to include("```this is the backtrace```")
+        expect(message).to include("\n\nCaused by `RuntimeError`: BAM!\n\n")
+      end
+
     end
 
     context 'if a block is given' do
