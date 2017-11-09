@@ -4,11 +4,12 @@ class SlackLogDevice
 
     MAX_MESSAGE_LENGTH = 4000
 
-    attr_reader :extra_metadata
+    attr_reader :extra_metadata, :max_backtrace_lines
 
     def initialize(options = {}, &block)
-      options.assert_valid_keys(:extra_metadata)
-      @extra_metadata = options.key?(:extra_metadata) ? options[:extra_metadata] : {}
+      options.assert_valid_keys(:extra_metadata, :max_backtrace_lines)
+      self.extra_metadata = options.key?(:extra_metadata) ? options[:extra_metadata] : {}
+      self.max_backtrace_lines = options.key?(:max_backtrace_lines) ? options[:max_backtrace_lines] : 10
       @message_converter = block_given? ? Proc.new(&block) : -> (message) { message }
     end
 
@@ -71,10 +72,21 @@ class SlackLogDevice
       metadata
     end
 
+    def extra_metadata=(value)
+      @extra_metadata = value.presence || {}
+    end
+
     def format_backtrace(exception, size_available)
-      backtrace = exception.backtrace.try(:join, "\n")
-      return nil if backtrace.blank? || size_available < 7
-      "```#{truncate(backtrace, size_available - 6)}```"
+      return nil if max_backtrace_lines == 0 || size_available < 7
+      backtrace = (exception.backtrace || []).select(&:present?).compact
+      return nil if backtrace.empty?
+      if max_backtrace_lines < 0
+        text = backtrace.join("\n")
+      else
+        text = backtrace[0, max_backtrace_lines].join("\n")
+        text << "\n..." if backtrace.size > max_backtrace_lines
+      end
+      "```#{truncate(text, size_available - 6)}```"
     end
 
     def format_metadata(message, size_available)
@@ -89,6 +101,12 @@ class SlackLogDevice
       end.compact.join("\n")
       return nil if text.blank?
       truncate(text, size_available)
+    end
+
+    def max_backtrace_lines=(value)
+      length = Integer(value) rescue nil
+      raise ArgumentError.new("Invalid max backtrace lines: #{value.inspect}") if length.nil? || length < -1
+      @max_backtrace_lines = length
     end
 
     def truncate(message, max_length = MAX_MESSAGE_LENGTH)

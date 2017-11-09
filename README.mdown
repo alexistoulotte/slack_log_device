@@ -43,6 +43,8 @@ default).
 
 ## Formatter
 
+### Usage
+
 `slack_log_device` provides a log formatter to have a pretty output for slack.
 It can be configured like this:
 
@@ -50,12 +52,16 @@ It can be configured like this:
 logger.formatter = SlackLogDevice.formatter
 ```
 
+### Converting message
+
 `SlackLogDevice.formatter` method also accepts block to transform logged
 message, example:
 
 ```ruby
 logger.formatter = SlackLogDevice.formatter { |message| message.reverse }
 ```
+
+### Metadata
 
 You can also add custom metadata to message sent to slack, here is how to do
 it:
@@ -66,6 +72,20 @@ logger.formatter = SlackLogDevice.formatter(extra_metadata: {
   'Machine' => `uname -a`,
 })
 ```
+
+### Backtrace
+
+Exception backtrace is automatically stripped to `10` lines. You can change
+this behavior via `:max_backtrace_lines`:
+
+```ruby
+logger.formatter = SlackLogDevice.formatter(max_backtrace_lines: 50)
+```
+
+- A value of `0` will not print backtrace.
+- A value of `-1` will not strip backtrace.
+
+### Rails metadata
 
 If you use [Ruby on Rails](http://rubyonrails.org/), you will get some
 metadata like current HTTP method, URL, remote address and User-Agent (see

@@ -139,10 +139,26 @@ describe SlackLogDevice::Formatter do
           exception = e
         end
         message = formatter.call('DEBUG', Time.now, nil, exception)
-        expect(message.size).to eq(max_message_length)
         expect(message).to include("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
         expect(message).to include("```this is the backtrace```")
         expect(message).to include("\n\nCaused by `RuntimeError`: BAM!\n\n")
+      end
+
+      it 'backtrace is stripped' do
+        exception = RuntimeError.new('BAM!')
+        exception.set_backtrace(('1'..'50').to_a)
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message).to include('BAM!')
+        expect(message).to include('9')
+        expect(message).to end_with("\n10\n...```")
+      end
+
+      it 'message does not ends with more than three dots if backtrace is stripped' do
+        exception = RuntimeError.new('BAM!')
+        exception.set_backtrace(('1'..'9').to_a + ['a' * (max_message_length - 72)] + ['b'])
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message).to end_with("a\n...```")
+        expect(message.size).to eq(max_message_length)
       end
 
     end
@@ -272,12 +288,59 @@ describe SlackLogDevice::Formatter do
 
     end
 
+    context 'with :max_backtrace_lines of 0' do
+
+      let(:formatter) { SlackLogDevice::Formatter.new(max_backtrace_lines: 0) }
+
+      it 'backtrace is not printed' do
+        exception = RuntimeError.new('BAM!')
+        exception.set_backtrace(('1'..'50').to_a)
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message).to eq('*`DEBUG`*: A `RuntimeError` occurred: BAM!')
+      end
+
+    end
+
+    context 'with :max_backtrace_lines of -1' do
+
+      let(:formatter) { SlackLogDevice::Formatter.new(max_backtrace_lines: -1) }
+
+      it 'backtrace is fully printed' do
+        exception = RuntimeError.new('BAM!')
+        exception.set_backtrace(('1'..'50').to_a)
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message).to include('BAM!')
+        expect(message).to include("```1\n")
+        expect(message).to end_with('50```')
+      end
+
+    end
+
+    context 'with :max_backtrace_lines of 30' do
+
+      let(:formatter) { SlackLogDevice::Formatter.new(max_backtrace_lines: 30) }
+
+      it 'backtrace is correctly stripped' do
+        exception = RuntimeError.new('BAM!')
+        exception.set_backtrace(('1'..'50').to_a)
+        message = formatter.call('DEBUG', Time.now, nil, exception)
+        expect(message).to include('BAM!')
+        expect(message).to end_with("\n30\n...```")
+        expect(message).not_to include('31')
+      end
+
+    end
   end
 
   describe '#extra_metadata' do
 
     it 'is an empty hash by default' do
       expect(SlackLogDevice::Formatter.new.extra_metadata).to eq({})
+    end
+
+    it 'is an empty hash if nil' do
+      formatter = SlackLogDevice::Formatter.new(extra_metadata: nil)
+      expect(formatter.extra_metadata).to eq({})
     end
 
     it 'can be specified at constructor' do
@@ -292,7 +355,42 @@ describe SlackLogDevice::Formatter do
     it 'raise an error if an invalid option is given' do
       expect {
         SlackLogDevice::Formatter.new(foo: 'bar')
-      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :extra_metadata')
+      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :extra_metadata, :max_backtrace_lines')
+    end
+
+  end
+
+  describe '#max_backtrace_lines' do
+
+    it 'is 10 by default' do
+      expect(SlackLogDevice::Formatter.new.max_backtrace_lines).to be(10)
+    end
+
+    it 'can be specified at constructor' do
+      formatter = SlackLogDevice::Formatter.new(max_backtrace_lines: 50)
+      expect(formatter.max_backtrace_lines).to be(50)
+    end
+
+    it 'can be -1' do
+      formatter = SlackLogDevice::Formatter.new(max_backtrace_lines: -1)
+      expect(formatter.max_backtrace_lines).to be(-1)
+    end
+
+    it 'can be set as string' do
+      formatter = SlackLogDevice::Formatter.new(max_backtrace_lines: '42')
+      expect(formatter.max_backtrace_lines).to be(42)
+    end
+
+    it 'raise an error if < -1' do
+      expect {
+        SlackLogDevice::Formatter.new(max_backtrace_lines: -2)
+      }.to raise_error(ArgumentError, 'Invalid max backtrace lines: -2')
+    end
+
+    it 'raise an error if invalid' do
+      expect {
+        SlackLogDevice::Formatter.new(max_backtrace_lines: 'foo')
+      }.to raise_error(ArgumentError, 'Invalid max backtrace lines: "foo"')
     end
 
   end

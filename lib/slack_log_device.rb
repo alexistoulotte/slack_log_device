@@ -8,8 +8,8 @@ class SlackLogDevice
   attr_reader :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url
 
   def self.enable_rails_logging!
-    require 'slack_log_device/debug_exceptions'
-    require 'slack_log_device/set_request_in_thread'
+    require "#{__dir__}/slack_log_device/debug_exceptions"
+    require "#{__dir__}/slack_log_device/set_request_in_thread"
     ActionDispatch::DebugExceptions.prepend(SlackLogDevice::DebugExceptions)
     Rails.application.config.middleware.insert_before(Rails::Rack::Logger, SlackLogDevice::SetRequestInThread)
     true
@@ -123,4 +123,4 @@ class SlackLogDevice
 
 end
 
-require 'slack_log_device/formatter'
+require "#{__dir__}/slack_log_device/formatter"
