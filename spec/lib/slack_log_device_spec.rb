@@ -16,7 +16,7 @@ describe SlackLogDevice do
     end
 
     it 'block is given to formatter constructor' do
-      formatter = SlackLogDevice.formatter { |message| message.reverse }
+      formatter = SlackLogDevice.formatter(disable_default_metadata: true) { |message| message.reverse }
       expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: dlroW olleH")
     end
 

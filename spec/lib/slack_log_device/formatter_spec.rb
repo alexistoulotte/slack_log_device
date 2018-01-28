@@ -1,4 +1,4 @@
-require 'spec_helper'
+  require 'spec_helper'
 
 describe SlackLogDevice::Formatter do
 
@@ -14,9 +14,19 @@ describe SlackLogDevice::Formatter do
 
   describe '#call' do
 
-    context "with no block or metadata" do
+    context "with no options" do
 
       let(:formatter) { SlackLogDevice::Formatter.new }
+
+      it 'returns formatted message with default metadata' do
+        expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: Hello World\n\n• *User*: `#{ENV['USER']}`\n• *Machine*: `#{Socket.gethostname}`\n• *PID*: `#{Process.pid}`")
+      end
+
+    end
+
+    context "with no block or metadata" do
+
+      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true) }
 
       it 'returns a formatted message' do
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: Hello World')
@@ -165,7 +175,7 @@ describe SlackLogDevice::Formatter do
 
     context 'if a block is given' do
 
-      let(:formatter) { SlackLogDevice::Formatter.new { |message| "#{message.reverse} Hey hoy" } }
+      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true) { |message| "#{message.reverse} Hey hoy" } }
 
       it 'returns formatter message with block invoked' do
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: dlroW olleH Hey hoy")
@@ -176,22 +186,22 @@ describe SlackLogDevice::Formatter do
       end
 
       it 'does not append block message if blank' do
-        formatter = SlackLogDevice.formatter { '   ' }
+        formatter = SlackLogDevice.formatter(disable_default_metadata: true) { '   ' }
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*:')
       end
 
       it 'converts block value to string' do
-        formatter = SlackLogDevice.formatter { 42 }
+        formatter = SlackLogDevice.formatter(disable_default_metadata: true) { 42 }
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: 42')
       end
 
       it 'is correct if block returns nil' do
-        formatter = SlackLogDevice.formatter { nil }
+        formatter = SlackLogDevice.formatter(disable_default_metadata: true) { nil }
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*:')
       end
 
       it 'strips block return value' do
-        formatter = SlackLogDevice.formatter { "  hey \n" }
+        formatter = SlackLogDevice.formatter(disable_default_metadata: true) { "  hey \n" }
         expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: hey')
       end
 
@@ -206,7 +216,7 @@ describe SlackLogDevice::Formatter do
       end
 
       it 'is correct with exception if block returns a blank message' do
-        formatter = SlackLogDevice.formatter { '    ' }
+        formatter = SlackLogDevice.formatter(disable_default_metadata: true) { '    ' }
         exception = RuntimeError.new('BAM!')
         exception.set_backtrace(['foo', 'bar'])
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred:\n\n```foo\nbar```")
@@ -234,7 +244,7 @@ describe SlackLogDevice::Formatter do
         'User ' => "   `#{user}` ",
         '  Reversed user' => -> (options) { user.reverse },
       }}
-      let(:formatter) { SlackLogDevice::Formatter.new(extra_metadata: extra_metadata) }
+      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true, extra_metadata: extra_metadata) }
       let(:user) { 'John' }
 
       it 'returns a message formatted' do
@@ -283,14 +293,14 @@ describe SlackLogDevice::Formatter do
       end
 
       it 'logs metadata' do
-        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n• *Method*: `GET`\n• *URL*: `http://google.com`\n• *Remote address*: `127.0.0.1`\n• *User-Agent*: `Mozilla`")
+        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n• *Method*: `GET`\n• *URL*: `http://google.com`\n• *Remote address*: `127.0.0.1`\n• *User-Agent*: `Mozilla`\n• *User*: `#{ENV['USER']}`\n• *Machine*: `#{Socket.gethostname}`\n• *PID*: `#{Process.pid}`")
       end
 
     end
 
     context 'with :max_backtrace_lines of 0' do
 
-      let(:formatter) { SlackLogDevice::Formatter.new(max_backtrace_lines: 0) }
+      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true, max_backtrace_lines: 0) }
 
       it 'backtrace is not printed' do
         exception = RuntimeError.new('BAM!')
@@ -332,6 +342,23 @@ describe SlackLogDevice::Formatter do
     end
   end
 
+  describe '#disable_default_metadata?' do
+
+    it 'is false by default' do
+      expect(SlackLogDevice::Formatter.new.disable_default_metadata?).to be(false)
+    end
+
+    it 'can be set to true' do
+      expect(SlackLogDevice::Formatter.new(disable_default_metadata: true).disable_default_metadata?).to be(true)
+    end
+
+    it 'is false if blank' do
+      expect(SlackLogDevice::Formatter.new(disable_default_metadata: ' ').disable_default_metadata?).to be(false)
+      expect(SlackLogDevice::Formatter.new(disable_default_metadata: 1).disable_default_metadata?).to be(true)
+    end
+
+  end
+
   describe '#extra_metadata' do
 
     it 'is an empty hash by default' do
@@ -355,7 +382,7 @@ describe SlackLogDevice::Formatter do
     it 'raise an error if an invalid option is given' do
       expect {
         SlackLogDevice::Formatter.new(foo: 'bar')
-      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :extra_metadata, :max_backtrace_lines')
+      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :disable_default_metadata, :extra_metadata, :max_backtrace_lines')
     end
 
   end

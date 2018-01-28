@@ -7,9 +7,10 @@ class SlackLogDevice
     attr_reader :extra_metadata, :max_backtrace_lines
 
     def initialize(options = {}, &block)
-      options.assert_valid_keys(:extra_metadata, :max_backtrace_lines)
+      options.assert_valid_keys(:disable_default_metadata, :extra_metadata, :max_backtrace_lines)
       self.extra_metadata = options.key?(:extra_metadata) ? options[:extra_metadata] : {}
       self.max_backtrace_lines = options.key?(:max_backtrace_lines) ? options[:max_backtrace_lines] : 10
+      @disable_default_metadata = options[:disable_default_metadata].present?
       @message_converter = block_given? ? Proc.new(&block) : -> (message) { message }
     end
 
@@ -29,6 +30,10 @@ class SlackLogDevice
         text = append_metadata(text, message)
       end
       truncate(text)
+    end
+
+    def disable_default_metadata?
+      @disable_default_metadata.present?
     end
 
     private
@@ -58,16 +63,22 @@ class SlackLogDevice
     end
 
     def default_metadata(request)
-      return {} if request.blank?
-      metadata = {
+      metadata = {}
+      return metadata if disable_default_metadata?
+      metadata.merge!({
         'Method' => request.method,
         'URL' => request.url,
         'Remote address' => request.remote_addr,
         'User-Agent' => request.user_agent,
-      }
+      }) if request.present?
+      metadata.merge!({
+        'User' => ENV['USER'],
+        'Machine' => Socket.gethostname,
+        'PID' => Process.pid,
+      })
       metadata.keys.each do |key|
         value = metadata[key]
-        metadata[key] = "`#{value.strip}`" if value.present?
+        metadata[key] = "`#{value.to_s.strip}`" if value.present?
       end
       metadata
     end

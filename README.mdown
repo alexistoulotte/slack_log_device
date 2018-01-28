@@ -34,7 +34,10 @@ by default).
 - `channel`: The channel to post message on (webhook configured channel by
 default). It can be a channel (if starting with `#`) or a specific user (if
 starting with a `@`).
-- `flush_delay`: The delay in seconds to send buffered messages (1 by default).
+- `disable_default_metadata`: `true` to disable default metadata (User,
+  Machine and PID). This is `false` (enabled) by default.
+- `flush_delay`: The delay in seconds to send buffered messages (1 by
+  default).
 - `max_buffer_size`: The max messages count to flush them (10 messages by
 default).
 - `timeout`: The timeout in seconds to send message to slack (5 by default).
@@ -63,15 +66,24 @@ logger.formatter = SlackLogDevice.formatter { |message| message.reverse }
 
 ### Metadata
 
+By default, formatter adds those metadata:
+
+- `PID`: The current process id.
+- `User`: The current user (`ENV['USER']`).
+- `Machine`: The machine name (`hostname`).
+
 You can also add custom metadata to message sent to slack, here is how to do
 it:
 
 ```ruby
 logger.formatter = SlackLogDevice.formatter(extra_metadata: {
-  'User' => -> (options) { ENV['USER'] },
-  'Machine' => `uname -a`,
+  'Exception class' => -> (options) { options[:exception].class.name },
+  'System' => `uname -a`,
 })
 ```
+
+As you can see, blocks (invoked with options contains `request` and
+`exception`) are supported.
 
 ### Backtrace
 

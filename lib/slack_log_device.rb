@@ -2,6 +2,7 @@ require 'active_support/core_ext/hash'
 require 'active_support/core_ext/string'
 require 'httparty'
 require 'logger'
+require 'socket'
 
 class SlackLogDevice
 
