@@ -2,15 +2,28 @@ class SlackLogDevice
 
   class Formatter
 
+    DEFAULT_ICON_EMOJIS = {
+      'DEBUG' => ':bug:',
+      'INFO' => ':information_source:',
+      'WARN' => ':warning:',
+      'ERROR' => ':x:',
+      'FATAL' => ':fire:',
+      'UNKNOWN' => ':interrobang:',
+    }.freeze
     MAX_MESSAGE_LENGTH = 4000
 
     attr_reader :extra_metadata, :max_backtrace_lines
 
     def initialize(options = {}, &block)
-      options.assert_valid_keys(:disable_default_metadata, :extra_metadata, :max_backtrace_lines)
+      options.assert_valid_keys(:disable_default_metadata, :extra_metadata, :icon_emoji, :icon_emojis, :max_backtrace_lines)
+      self.disable_default_metadata = options[:disable_default_metadata]
       self.extra_metadata = options.key?(:extra_metadata) ? options[:extra_metadata] : {}
       self.max_backtrace_lines = options.key?(:max_backtrace_lines) ? options[:max_backtrace_lines] : 10
-      @disable_default_metadata = options[:disable_default_metadata].present?
+
+      @icon_emojis = DEFAULT_ICON_EMOJIS.dup
+      self.icon_emojis = options[:icon_emojis] if options.key?(:icon_emojis)
+      self.icon_emoji = options[:icon_emoji] if options.key?(:icon_emoji)
+
       @message_converter = block_given? ? Proc.new(&block) : -> (message) { message }
     end
 
@@ -29,11 +42,47 @@ class SlackLogDevice
         text << " #{convert_message(message)}".rstrip
         text = append_metadata(text, message)
       end
-      truncate(text)
+      Message.new(truncate(text), icon_emoji: icon_emoji(severity))
+    end
+
+    def disable_default_metadata=(value)
+      @disable_default_metadata = value.present?
     end
 
     def disable_default_metadata?
-      @disable_default_metadata.present?
+      @disable_default_metadata
+    end
+
+    def extra_metadata=(value)
+      @extra_metadata = (value.presence || {})
+    end
+
+    def icon_emoji(severity)
+      @icon_emojis[parse_severity(severity)]
+    end
+
+    def icon_emoji=(value)
+      value = value.to_s.strip.presence
+      @icon_emojis.keys.each do |severity|
+        @icon_emojis[severity] = value
+      end
+    end
+
+    def icon_emojis
+      @icon_emojis.freeze
+    end
+
+    def icon_emojis=(values = {})
+      values.each do |severity, emoji|
+        @icon_emojis[parse_severity(severity)] = emoji.to_s.strip.presence
+      end
+      @icon_emojis
+    end
+
+    def max_backtrace_lines=(value)
+      length = Integer(value) rescue nil
+      raise ArgumentError.new("Invalid max backtrace lines: #{value.inspect}") if length.nil? || length < -1
+      @max_backtrace_lines = length
     end
 
     private
@@ -83,10 +132,6 @@ class SlackLogDevice
       metadata
     end
 
-    def extra_metadata=(value)
-      @extra_metadata = value.presence || {}
-    end
-
     def format_backtrace(exception, size_available)
       return nil if max_backtrace_lines == 0 || size_available < 7
       backtrace = (exception.backtrace || []).select(&:present?).compact
@@ -114,10 +159,10 @@ class SlackLogDevice
       truncate(text, size_available)
     end
 
-    def max_backtrace_lines=(value)
-      length = Integer(value) rescue nil
-      raise ArgumentError.new("Invalid max backtrace lines: #{value.inspect}") if length.nil? || length < -1
-      @max_backtrace_lines = length
+    def parse_severity(value)
+      severity = value.to_s.strip.upcase
+      return severity if DEFAULT_ICON_EMOJIS.key?(severity)
+      raise("Invalid log severity: #{value.inspect}")
     end
 
     def truncate(message, max_length = MAX_MESSAGE_LENGTH)
@@ -130,3 +175,5 @@ class SlackLogDevice
   end
 
 end
+
+require "#{__dir__}/formatter/message"

@@ -54,13 +54,15 @@ class SlackLogDevice
 
   def flush
     while !@buffer.empty? do
-      message = ''
+      message = nil
       @mutex.synchronize do
         message = @buffer.pop
       end
-      next if message.blank?
-      data = { 'text' => message.to_s }
+      text = message.to_s.strip
+      next if text.empty?
+      data = { 'text' => text }
       data['channel'] = channel if channel.present?
+      data['icon_emoji'] = message.icon_emoji if message.respond_to?(:icon_emoji) && message.icon_emoji.present?
       data['username'] = username if username.present?
       begin
         HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: timeout)
@@ -105,7 +107,6 @@ class SlackLogDevice
   end
 
   def write(message)
-    message = message.to_s.try(:strip)
     return if message.blank?
     @mutex.synchronize do
       @buffer << message

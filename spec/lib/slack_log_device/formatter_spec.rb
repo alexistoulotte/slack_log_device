@@ -357,6 +357,13 @@ describe SlackLogDevice::Formatter do
       expect(SlackLogDevice::Formatter.new(disable_default_metadata: 1).disable_default_metadata?).to be(true)
     end
 
+    it 'can be specified' do
+      formatter = SlackLogDevice::Formatter.new
+      expect {
+        formatter.disable_default_metadata = true
+      }.to change { formatter.disable_default_metadata? }.from(false).to(true)
+    end
+
   end
 
   describe '#extra_metadata' do
@@ -375,6 +382,98 @@ describe SlackLogDevice::Formatter do
       expect(formatter.extra_metadata).to eq({ 'Bar' => 'foo' })
     end
 
+    it 'can be specified at initialization' do
+      formatter = SlackLogDevice::Formatter.new
+      expect {
+        formatter.extra_metadata = { 'Bar' => 'Foo' }
+      }.to change { formatter.extra_metadata }.from({}).to({ 'Bar' => 'Foo' })
+    end
+
+  end
+
+  describe '#icon_emoji' do
+
+    let(:formatter) { SlackLogDevice::Formatter.new }
+
+    it 'returns emoji (or nil) for given level' do
+      formatter.icon_emojis = { 'INFO' => ':test:' }
+      expect(formatter.icon_emoji('info')).to eq(':test:')
+      expect(formatter.icon_emoji(:debug)).to eq(':bug:')
+      expect(formatter.icon_emoji('FATAL ')).to eq(':fire:')
+    end
+
+    it 'raise an error if level is invalid' do
+      expect {
+        formatter.icon_emoji('BUG')
+      }.to raise_error('Invalid log severity: "BUG"')
+    end
+
+  end
+
+  describe '#icon_emoji=' do
+
+    let(:formatter) { SlackLogDevice::Formatter.new }
+
+    it 'set emoji for all severities' do
+      formatter.icon_emoji = ':bug:'
+      expect(formatter.icon_emoji('warn       ')).to eq(':bug:')
+      expect(formatter.icon_emoji('FATAL')).to eq(':bug:')
+    end
+
+    it 'can be removed for all severities' do
+      formatter.icon_emoji = "  \n "
+      expect(formatter.icon_emoji('warn')).to be(nil)
+      expect(formatter.icon_emoji('FATAL')).to be(nil)
+    end
+
+    it 'can also be used at constructor level' do
+      formatter = SlackLogDevice::Formatter.new(icon_emoji: ':skull:')
+      expect(formatter.icon_emojis).to include('FATAL' => ':skull:', 'DEBUG' => ':skull:')
+    end
+
+  end
+
+  describe '#icon_emojis' do
+
+    it 'has default values if not specified' do
+      formatter = SlackLogDevice::Formatter.new
+      expect(formatter.icon_emojis).to include('DEBUG' => ':bug:', 'FATAL' => ':fire:')
+    end
+
+    it 'some values can be set' do
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { 'DEBUG' => ':test:' })
+      expect(formatter.icon_emojis).to include('DEBUG' => ':test:', 'FATAL' => ':fire:')
+    end
+
+    it 'raise an error if key is invalid' do
+      expect {
+        SlackLogDevice::Formatter.new(icon_emojis: { 'BUG' => ':test:' })
+      }.to raise_error('Invalid log severity: "BUG"')
+    end
+
+    it 'removes default value if blank' do
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { 'INFO' => '  ' })
+      expect(formatter.icon_emojis).to include('INFO' => nil, 'FATAL' => ':fire:')
+    end
+
+    it 'keys are case insensitive and can be specified as symbol' do
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { :DebUg => ':test:' })
+      expect(formatter.icon_emojis).to include('DEBUG' => ':test:', 'FATAL' => ':fire:')
+    end
+
+    it 'can be set via setter' do
+      formatter = SlackLogDevice::Formatter.new
+      formatter.icon_emojis = { 'DEBUG' => ':test' }
+      expect(formatter.icon_emojis).to include('DEBUG' => ':test', 'FATAL' => ':fire:')
+    end
+
+    it 'is frozen' do
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { :DebUg => ':test:' })
+      expect {
+        formatter.icon_emojis['WARN'] = ':test:'
+      }.to raise_error(FrozenError)
+    end
+
   end
 
   describe '#initialize' do
@@ -382,7 +481,7 @@ describe SlackLogDevice::Formatter do
     it 'raise an error if an invalid option is given' do
       expect {
         SlackLogDevice::Formatter.new(foo: 'bar')
-      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :disable_default_metadata, :extra_metadata, :max_backtrace_lines')
+      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :disable_default_metadata, :extra_metadata, :icon_emoji, :icon_emojis, :max_backtrace_lines')
     end
 
   end
@@ -418,6 +517,13 @@ describe SlackLogDevice::Formatter do
       expect {
         SlackLogDevice::Formatter.new(max_backtrace_lines: 'foo')
       }.to raise_error(ArgumentError, 'Invalid max backtrace lines: "foo"')
+    end
+
+    it 'can be set via setter' do
+      formatter = SlackLogDevice::Formatter.new
+      expect {
+        formatter.max_backtrace_lines = 15
+      }.to change { formatter.max_backtrace_lines }.from(10).to(15)
     end
 
   end

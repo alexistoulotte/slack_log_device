@@ -34,8 +34,6 @@ by default).
 - `channel`: The channel to post message on (webhook configured channel by
 default). It can be a channel (if starting with `#`) or a specific user (if
 starting with a `@`).
-- `disable_default_metadata`: `true` to disable default metadata (User,
-  Machine and PID). This is `false` (enabled) by default.
 - `flush_delay`: The delay in seconds to send buffered messages (1 by
   default).
 - `max_buffer_size`: The max messages count to flush them (10 messages by
@@ -72,6 +70,9 @@ By default, formatter adds those metadata:
 - `User`: The current user (`ENV['USER']`).
 - `Machine`: The machine name (`hostname`).
 
+To disable default metadata (User, Machine and PID), set
+`disable_default_metadata` formatter option to `true`.
+
 You can also add custom metadata to message sent to slack, here is how to do
 it:
 
@@ -106,6 +107,21 @@ Rails configuration section).
 If you need more, use `:extra_metadata` option. Note that blocks specified
 with `:extra_metadata` option are invoked with options that may contains
 `:request` option (if present).
+
+### Icon emojis
+
+By default, there is a different icon emoji for each logging severity level.
+But, it can be configured:
+
+```ruby
+logger.formatter = SlackLogDevice.formatter(max_backtrace_lines: 50, icon_emojis: { fatal: ':metal:', warn: ':skull:' })
+```
+
+Or for all severity levels:
+
+```ruby
+logger.formatter = SlackLogDevice.formatter(max_backtrace_lines: 50, icon_emoji: ':metal:')
+```
 
 ## Rails configuration
 

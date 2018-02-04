@@ -161,6 +161,44 @@ describe SlackLogDevice do
       device.flush
     end
 
+    it 'adds icon_emoji if message respond to it' do
+      message = 'BAM!'
+      def message.icon_emoji
+        ':-1:'
+      end
+      device.write(message)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'icon_emoji' => ':-1:', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      device.flush
+    end
+
+    it 'does not add icon_emoji if message respond to it but is blank' do
+      message = 'BAM!'
+      def message.icon_emoji
+        "\n "
+      end
+      device.write(message)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM!', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      device.flush
+    end
+
+    it 'strips message' do
+      device.write("     BAM !\n")
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => 'BAM !', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      device.flush
+    end
+
+    it 'converts message to string' do
+      device.write(42)
+      expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => '42', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+      device.flush
+    end
+
+    it 'does not flush anything if message is blank' do
+      device.write("\n ")
+      expect(HTTParty).not_to receive(:post)
+      device.flush
+    end
+
   end
 
   describe '#flush?' do
@@ -447,16 +485,6 @@ describe SlackLogDevice do
       expect(device.write('BAM!')).to be_nil
     end
 
-    it 'strips message' do
-      device.write("     BAM  !\n")
-      expect(device.instance_variable_get(:@buffer)).to eq(['BAM  !'])
-    end
-
-    it 'converts message to string' do
-      device.write(42)
-      expect(device.instance_variable_get(:@buffer)).to eq(['42'])
-    end
-
     it 'adds given string to existing buffer with a two \n' do
       device.write('BAM!')
       expect {
@@ -540,6 +568,28 @@ describe SlackLogDevice do
           expect(logdev.filename).to be_nil
         end
 
+      end
+
+    end
+
+    context 'with formatter set' do
+
+      let(:formatter) { SlackLogDevice.formatter(disable_default_metadata: true, icon_emojis: { 'INFO' => ':test:' }) }
+
+      before do
+        logger.formatter = formatter
+      end
+
+      it 'adds icon emoji' do
+        expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => '*`FATAL`*: BIM!', 'icon_emoji' => ':fire:', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+        logger.fatal('BIM!')
+        device.flush
+      end
+
+      it 'adds icon emoji with default value' do
+        expect(HTTParty).to receive(:post).with(options[:webhook_url], body: { 'text' => '*`INFO`*: BIM!', 'icon_emoji' => ':test:', 'username' => options[:username] }.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: 5)
+        logger.info('BIM!')
+        device.flush
       end
 
     end
