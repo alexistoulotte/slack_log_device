@@ -95,9 +95,9 @@ class SlackLogDevice
     def append_exception_cause(text, exception)
       cause = exception.cause
       return text if cause.nil?
-      message = "\n\nCaused by `#{exception.class}`"
+      message = "\n\nCaused by `#{cause.class}`"
       return text if (text + message).size > MAX_MESSAGE_LENGTH
-      text = truncate("#{text}#{message}: #{exception.message}")
+      text = truncate("#{text}#{message}: #{cause.message}")
       text = append_exception_backtrace(text, cause)
       append_exception_cause(text, cause)
     end

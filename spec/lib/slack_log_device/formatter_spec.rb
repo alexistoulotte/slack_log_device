@@ -142,16 +142,16 @@ describe SlackLogDevice::Formatter do
           begin
             raise 'BIM!'
           rescue => e
-            raise 'BAM!'
+            raise ArgumentError.new('BAM!')
           end
         rescue => e
           e.set_backtrace(['this is the backtrace'])
           exception = e
         end
         message = formatter.call('DEBUG', Time.now, nil, exception)
-        expect(message).to include("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        expect(message).to include("*`DEBUG`*: A `ArgumentError` occurred: BAM!")
         expect(message).to include("```this is the backtrace```")
-        expect(message).to include("\n\nCaused by `RuntimeError`: BAM!\n\n")
+        expect(message).to include("\n\nCaused by `RuntimeError`: BIM!\n\n")
       end
 
       it 'backtrace is stripped' do
