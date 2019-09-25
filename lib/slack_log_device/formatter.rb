@@ -10,7 +10,6 @@ class SlackLogDevice
       'FATAL' => ':fire:',
       'UNKNOWN' => ':interrobang:',
     }.freeze
-    ENCODING = 'UTF-8'
     MAX_MESSAGE_LENGTH = 4000
 
     attr_reader :extra_metadata, :max_backtrace_lines
@@ -30,7 +29,7 @@ class SlackLogDevice
 
     def call(severity, datetime, progname, message)
       text = "*`#{severity}`*"
-      text << " (*#{progname.encode(ENCODING)}*)" if progname.present?
+      text << " (*#{to_utf8(progname)}*)" if progname.present?
       text << ':'
       if message.is_a?(Exception)
         exception = message
@@ -90,26 +89,27 @@ class SlackLogDevice
 
     def append_exception_backtrace(text, exception)
       backtrace = format_backtrace(exception, MAX_MESSAGE_LENGTH - text.size - 2)
-      backtrace.present? ? "#{text}\n\n#{backtrace}" : text
+      backtrace.present? ? "#{to_utf8(text)}\n\n#{backtrace}" : text
     end
 
     def append_exception_cause(text, exception)
       cause = exception.cause
+      text = to_utf8(text)
       return text if cause.nil?
       message = "\n\nCaused by `#{cause.class}`"
       return text if (text + message).size > MAX_MESSAGE_LENGTH
-      text = truncate("#{text}#{message}: #{cause.message.try(:encode, ENCODING)}")
+      text = truncate("#{text}#{message}: #{to_utf8(cause.message)}")
       text = append_exception_backtrace(text, cause)
       append_exception_cause(text, cause)
     end
 
     def append_metadata(text, message)
       metadata = format_metadata(message, MAX_MESSAGE_LENGTH - text.size - 2)
-      metadata.present? ? "#{text}\n\n#{metadata}" : text
+      metadata.present? ? "#{to_utf8(text)}\n\n#{metadata}" : text
     end
 
     def convert_message(message)
-      @message_converter.call(message.to_s.strip).to_s.strip.encode(ENCODING)
+      to_utf8(@message_converter.call(to_utf8(message.to_s.strip)).to_s.strip)
     end
 
     def default_metadata(request)
@@ -128,14 +128,14 @@ class SlackLogDevice
       })
       metadata.keys.each do |key|
         value = metadata[key]
-        metadata[key] = "`#{value.to_s.strip}`" if value.present?
+        metadata[key] = "`#{to_utf8(value.to_s.strip)}`" if value.present?
       end
       metadata
     end
 
     def format_backtrace(exception, size_available)
       return nil if max_backtrace_lines == 0 || size_available < 7
-      backtrace = (exception.backtrace || []).select(&:present?).compact.map { |line| line.encode(ENCODING) }
+      backtrace = (exception.backtrace || []).select(&:present?).compact.map { |line| to_utf8(line) }
       return nil if backtrace.empty?
       if max_backtrace_lines < 0
         text = backtrace.join("\n")
@@ -154,7 +154,7 @@ class SlackLogDevice
       options[:request] = request if request.present?
       text = default_metadata(request).merge(extra_metadata).map do |name, value|
         value = value.call(options) if value.respond_to?(:call)
-        value.present? ? "• *#{name.encode(ENCODING).strip}*: #{value.encode(ENCODING).strip}" : nil
+        value.present? ? "• *#{to_utf8(name).strip}*: #{to_utf8(value).strip}" : nil
       end.compact.join("\n")
       return nil if text.blank?
       truncate(text, size_available)
@@ -170,7 +170,12 @@ class SlackLogDevice
       message = message.strip
       return message if message.size <= max_length
       return message[0, max_length] if max_length < 3
-      "#{message[0, max_length - 3]}...".encode(ENCODING)
+      to_utf8("#{message[0, max_length - 3]}...")
+    end
+
+    def to_utf8(text)
+      return text if text.nil? || text.encoding == Encoding::UTF_8
+      text.encode(Encoding::UTF_8) rescue text.dup.force_encoding(Encoding::UTF_8)
     end
 
   end
