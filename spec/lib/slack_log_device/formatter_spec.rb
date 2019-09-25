@@ -298,6 +298,22 @@ describe SlackLogDevice::Formatter do
 
     end
 
+    context 'with invalid encoding' do
+
+      let(:exception) { RuntimeError.new('BâM!'.encode('cp1252')) }
+      let(:formatter) { SlackLogDevice::Formatter.new(extra_metadata: { 'Baré'.encode('iso-8859-1') => 'foo' }) }
+      let(:request) { double(remote_addr: '127.0.0.1', user_agent: 'Mozïlla'.encode('iso-8859-15'), method: 'GET', url: 'http://google.côm'.encode('iso-8859-1')) }
+
+      before :each do
+        Thread.current[:slack_log_device_request] = request
+      end
+
+      it 'is correct' do
+        expect(formatter.call('DEBUG', Time.now, 'fôo'.encode('cp1252'), exception)).to eq("*`DEBUG`* (*fôo*): A `RuntimeError` occurred: BâM!\n\n• *Method*: `GET`\n• *URL*: `http://google.côm`\n• *Remote address*: `127.0.0.1`\n• *User-Agent*: `Mozïlla`\n• *User*: `#{ENV['USER']}`\n• *Machine*: `#{Socket.gethostname}`\n• *PID*: `#{Process.pid}`\n• *Baré*: foo")
+      end
+
+    end
+
     context 'with :max_backtrace_lines of 0' do
 
       let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true, max_backtrace_lines: 0) }

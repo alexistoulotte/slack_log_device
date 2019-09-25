@@ -10,6 +10,7 @@ class SlackLogDevice
       'FATAL' => ':fire:',
       'UNKNOWN' => ':interrobang:',
     }.freeze
+    ENCODING = 'UTF-8'
     MAX_MESSAGE_LENGTH = 4000
 
     attr_reader :extra_metadata, :max_backtrace_lines
@@ -29,7 +30,7 @@ class SlackLogDevice
 
     def call(severity, datetime, progname, message)
       text = "*`#{severity}`*"
-      text << " (*#{progname}*)" if progname.present?
+      text << " (*#{progname.encode(ENCODING)}*)" if progname.present?
       text << ':'
       if message.is_a?(Exception)
         exception = message
@@ -97,7 +98,7 @@ class SlackLogDevice
       return text if cause.nil?
       message = "\n\nCaused by `#{cause.class}`"
       return text if (text + message).size > MAX_MESSAGE_LENGTH
-      text = truncate("#{text}#{message}: #{cause.message}")
+      text = truncate("#{text}#{message}: #{cause.message.try(:encode, ENCODING)}")
       text = append_exception_backtrace(text, cause)
       append_exception_cause(text, cause)
     end
@@ -108,7 +109,7 @@ class SlackLogDevice
     end
 
     def convert_message(message)
-      @message_converter.call(message.to_s.strip).to_s.strip
+      @message_converter.call(message.to_s.strip).to_s.strip.encode(ENCODING)
     end
 
     def default_metadata(request)
@@ -134,7 +135,7 @@ class SlackLogDevice
 
     def format_backtrace(exception, size_available)
       return nil if max_backtrace_lines == 0 || size_available < 7
-      backtrace = (exception.backtrace || []).select(&:present?).compact
+      backtrace = (exception.backtrace || []).select(&:present?).compact.map { |line| line.encode(ENCODING) }
       return nil if backtrace.empty?
       if max_backtrace_lines < 0
         text = backtrace.join("\n")
@@ -153,7 +154,7 @@ class SlackLogDevice
       options[:request] = request if request.present?
       text = default_metadata(request).merge(extra_metadata).map do |name, value|
         value = value.call(options) if value.respond_to?(:call)
-        value.present? ? "• *#{name.strip}*: #{value.strip}" : nil
+        value.present? ? "• *#{name.encode(ENCODING).strip}*: #{value.encode(ENCODING).strip}" : nil
       end.compact.join("\n")
       return nil if text.blank?
       truncate(text, size_available)
@@ -169,7 +170,7 @@ class SlackLogDevice
       message = message.strip
       return message if message.size <= max_length
       return message[0, max_length] if max_length < 3
-      "#{message[0, max_length - 3]}..."
+      "#{message[0, max_length - 3]}...".encode(ENCODING)
     end
 
   end
