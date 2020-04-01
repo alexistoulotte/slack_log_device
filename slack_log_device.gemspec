@@ -16,9 +16,9 @@ Gem::Specification.new do |s|
   s.required_ruby_version = '>= 2.1.0'
 
   s.add_dependency 'activesupport', '>= 4.1.0', '< 7.0.0'
-  s.add_dependency 'httparty', '>= 0.14.0', '< 0.18.0'
+  s.add_dependency 'httparty', '>= 0.14.0', '< 0.19.0'
 
   s.add_development_dependency 'byebug', '>= 9.0.0', '< 12.0.0'
-  s.add_development_dependency 'rake', '>= 12.0.0', '< 13.0.0'
-  s.add_development_dependency 'rspec', '>= 3.5.0', '< 3.9.0'
+  s.add_development_dependency 'rake', '>= 12.0.0', '< 14.0.0'
+  s.add_development_dependency 'rspec', '>= 3.5.0', '< 3.10.0'
 end
