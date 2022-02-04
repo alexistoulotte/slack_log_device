@@ -1,4 +1,4 @@
-  require 'spec_helper'
+require 'spec_helper'
 
 describe SlackLogDevice::Formatter do
 
@@ -14,7 +14,7 @@ describe SlackLogDevice::Formatter do
 
   describe '#call' do
 
-    context "with no options" do
+    context 'with no options' do
 
       let(:formatter) { SlackLogDevice::Formatter.new }
 
@@ -24,7 +24,7 @@ describe SlackLogDevice::Formatter do
 
     end
 
-    context "with no block or metadata" do
+    context 'with no block or metadata' do
 
       let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true) }
 
@@ -46,24 +46,24 @@ describe SlackLogDevice::Formatter do
 
       it 'formats exception' do
         exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['foo', 'bar'])
+        exception.set_backtrace(%w(foo bar))
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!\n\n```foo\nbar```")
       end
 
       it 'formats exception with no message' do
         exception = RuntimeError.new(' ')
-        exception.set_backtrace(['foo', 'bar'])
+        exception.set_backtrace(%w(foo bar))
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred:\n\n```foo\nbar```")
       end
 
       it 'formats exception with no backtrace' do
         exception = RuntimeError.new('BAM!')
-        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq('*`DEBUG`*: A `RuntimeError` occurred: BAM!')
       end
 
       it 'strips exception message' do
         exception = RuntimeError.new("  BAM!   \n")
-        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: BAM!")
+        expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq('*`DEBUG`*: A `RuntimeError` occurred: BAM!')
       end
 
       it 'message never exceed 4000 chars (without exception)' do
@@ -77,7 +77,7 @@ describe SlackLogDevice::Formatter do
         exception.set_backtrace(['a' * (max_message_length - 49)])
         message = formatter.call('DEBUG', Time.now, nil, exception)
         expect(message.size).to eq(max_message_length)
-        expect(message).to end_with("aaaaaa...```")
+        expect(message).to end_with('aaaaaa...```')
       end
 
       it 'can be exactly 4000 chars with trace (without three dots)' do
@@ -141,7 +141,7 @@ describe SlackLogDevice::Formatter do
         begin
           begin
             raise 'BIM!'
-          rescue => e
+          rescue
             raise ArgumentError.new('BAM!')
           end
         rescue => e
@@ -149,8 +149,8 @@ describe SlackLogDevice::Formatter do
           exception = e
         end
         message = formatter.call('DEBUG', Time.now, nil, exception)
-        expect(message).to include("*`DEBUG`*: A `ArgumentError` occurred: BAM!")
-        expect(message).to include("```this is the backtrace```")
+        expect(message).to include('*`DEBUG`*: A `ArgumentError` occurred: BAM!')
+        expect(message).to include('```this is the backtrace```')
         expect(message).to include("\n\nCaused by `RuntimeError`: BIM!\n\n")
       end
 
@@ -178,11 +178,11 @@ describe SlackLogDevice::Formatter do
       let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true) { |message| "#{message.reverse} Hey hoy" } }
 
       it 'returns formatter message with block invoked' do
-        expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: dlroW olleH Hey hoy")
+        expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: dlroW olleH Hey hoy')
       end
 
       it 'invokes block with stripped message' do
-        expect(formatter.call('DEBUG', Time.now, ' ', "    Hello World  \t")).to eq("*`DEBUG`*: dlroW olleH Hey hoy")
+        expect(formatter.call('DEBUG', Time.now, ' ', "    Hello World  \t")).to eq('*`DEBUG`*: dlroW olleH Hey hoy')
       end
 
       it 'does not append block message if blank' do
@@ -206,19 +206,19 @@ describe SlackLogDevice::Formatter do
       end
 
       it 'includes progname if given' do
-        expect(formatter.call('DEBUG', Time.now, 'MyApp', 'Hello World')).to eq("*`DEBUG`* (*MyApp*): dlroW olleH Hey hoy")
+        expect(formatter.call('DEBUG', Time.now, 'MyApp', 'Hello World')).to eq('*`DEBUG`* (*MyApp*): dlroW olleH Hey hoy')
       end
 
       it 'formats exception' do
         exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['foo', 'bar'])
+        exception.set_backtrace(%w(foo bar))
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred: !MAB Hey hoy\n\n```foo\nbar```")
       end
 
       it 'is correct with exception if block returns a blank message' do
         formatter = SlackLogDevice.formatter(disable_default_metadata: true) { '    ' }
         exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['foo', 'bar'])
+        exception.set_backtrace(%w(foo bar))
         expect(formatter.call('DEBUG', Time.now, nil, exception)).to eq("*`DEBUG`*: A `RuntimeError` occurred:\n\n```foo\nbar```")
       end
 
@@ -233,18 +233,20 @@ describe SlackLogDevice::Formatter do
         exception.set_backtrace(['a' * max_message_length])
         message = formatter.call('DEBUG', Time.now, 'My App', exception)
         expect(message.size).to eq(max_message_length)
-        expect(message).to end_with("aaaaaa...```")
+        expect(message).to end_with('aaaaaa...```')
       end
 
     end
 
     context 'with extra metadata' do
 
-      let(:extra_metadata) {{
-        'User ' => "   `#{user}` ",
-        '  Reversed user' => -> (options) { user.reverse },
-      }}
-      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true, extra_metadata: extra_metadata) }
+      let(:extra_metadata) {
+        {
+          'User ' => "   `#{user}` ",
+          '  Reversed user' => -> (_options) { user.reverse },
+        }
+      }
+      let(:formatter) { SlackLogDevice::Formatter.new(disable_default_metadata: true, extra_metadata:) }
       let(:user) { 'John' }
 
       it 'returns a message formatted' do
@@ -253,7 +255,7 @@ describe SlackLogDevice::Formatter do
 
       it 'returns a message formatted (with exception)' do
         exception = RuntimeError.new('BAM!')
-        exception.set_backtrace(['a', 'b'])
+        exception.set_backtrace(%w(a b))
         message = formatter.call('DEBUG', Time.now, 'My App', exception)
         expect(message).to eq("*`DEBUG`* (*My App*): A `RuntimeError` occurred: BAM!\n\n• *User*: `John`\n• *Reversed user*: nhoJ\n\n```a\nb```")
       end
@@ -277,7 +279,7 @@ describe SlackLogDevice::Formatter do
 
       it 'blocks of extra metadata does not add exception option if not present' do
         extra_metadata['Exception?'] = -> (options) { options.key?(:exception) ? 'Yes' : 'No' }
-        expect(formatter.call('DEBUG', Time.now, nil, 'Hello World')).to include("• *Exception?*: No")
+        expect(formatter.call('DEBUG', Time.now, nil, 'Hello World')).to include('• *Exception?*: No')
       end
 
     end
@@ -473,7 +475,7 @@ describe SlackLogDevice::Formatter do
     end
 
     it 'keys are case insensitive and can be specified as symbol' do
-      formatter = SlackLogDevice::Formatter.new(icon_emojis: { :DebUg => ':test:' })
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { DebUg: ':test:' })
       expect(formatter.icon_emojis).to include('DEBUG' => ':test:', 'FATAL' => ':fire:')
     end
 
@@ -484,7 +486,7 @@ describe SlackLogDevice::Formatter do
     end
 
     it 'is frozen' do
-      formatter = SlackLogDevice::Formatter.new(icon_emojis: { :DebUg => ':test:' })
+      formatter = SlackLogDevice::Formatter.new(icon_emojis: { DebUg: ':test:' })
       expect {
         formatter.icon_emojis['WARN'] = ':test:'
       }.to raise_error(FrozenError)

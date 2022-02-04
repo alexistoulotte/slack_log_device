@@ -27,7 +27,7 @@ class SlackLogDevice
       @message_converter = block_given? ? Proc.new(&block) : -> (message) { message }
     end
 
-    def call(severity, datetime, progname, message)
+    def call(severity, _datetime, progname, message)
       text = "*`#{severity}`*"
       text << " (*#{to_utf8(progname)}*)" if progname.present?
       text << ':'
@@ -63,7 +63,7 @@ class SlackLogDevice
 
     def icon_emoji=(value)
       value = value.to_s.strip.presence
-      @icon_emojis.keys.each do |severity|
+      @icon_emojis.each_key do |severity|
         @icon_emojis[severity] = value
       end
     end
@@ -76,7 +76,6 @@ class SlackLogDevice
       values.each do |severity, emoji|
         @icon_emojis[parse_severity(severity)] = emoji.to_s.strip.presence
       end
-      @icon_emojis
     end
 
     def max_backtrace_lines=(value)
@@ -126,7 +125,7 @@ class SlackLogDevice
         'Machine' => Socket.gethostname,
         'PID' => Process.pid,
       })
-      metadata.keys.each do |key|
+      metadata.each_key do |key|
         value = metadata[key]
         metadata[key] = "`#{to_utf8(value.to_s.strip)}`" if value.present?
       end

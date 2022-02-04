@@ -16,8 +16,8 @@ describe SlackLogDevice do
     end
 
     it 'block is given to formatter constructor' do
-      formatter = SlackLogDevice.formatter(disable_default_metadata: true) { |message| message.reverse }
-      expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq("*`DEBUG`*: dlroW olleH")
+      formatter = SlackLogDevice.formatter(disable_default_metadata: true, &:reverse)
+      expect(formatter.call('DEBUG', Time.now, ' ', 'Hello World')).to eq('*`DEBUG`*: dlroW olleH')
     end
 
     it 'options are forwarded to formatter constructor' do
@@ -66,7 +66,7 @@ describe SlackLogDevice do
     it 'can be set' do
       expect {
         device.channel = '#foo-bar_42abc'
-      }.to change { device.channel  }.from(nil).to('#foo-bar_42abc')
+      }.to change { device.channel }.from(nil).to('#foo-bar_42abc')
     end
 
     it 'raise an error if it contains spaces' do
@@ -287,7 +287,7 @@ describe SlackLogDevice do
     it 'raise an error if an invalid option is given' do
       expect {
         SlackLogDevice.new(foo: 'bar')
-      }.to raise_error(ArgumentError, "Unknown key: :foo. Valid keys are: :auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url")
+      }.to raise_error(ArgumentError, 'Unknown key: :foo. Valid keys are: :auto_flush, :channel, :flush_delay, :max_buffer_size, :timeout, :username, :webhook_url')
     end
 
     it 'raise an error if webhook option is not given' do

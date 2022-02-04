@@ -1,3 +1,4 @@
+require 'active_support/isolated_execution_state'
 require 'active_support/core_ext/hash'
 require 'active_support/core_ext/string'
 require 'httparty'
@@ -53,7 +54,7 @@ class SlackLogDevice
   end
 
   def flush
-    while !@buffer.empty? do
+    until @buffer.empty?
       message = nil
       @mutex.synchronize do
         message = @buffer.pop
@@ -65,9 +66,11 @@ class SlackLogDevice
       data['icon_emoji'] = message.icon_emoji if message.respond_to?(:icon_emoji) && message.icon_emoji.present?
       data['username'] = username if username.present?
       begin
-        HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout: timeout)
+        HTTParty.post(webhook_url, body: data.to_json, headers: { 'Content-Type' => 'application/json' }, timeout:)
+      # rubocop:disable Lint/RescueException
       rescue Exception => e
-        STDERR.puts(e)
+        # rubocop:enable Lint/RescueException
+        warn(e)
       end
     end
     nil
@@ -111,7 +114,7 @@ class SlackLogDevice
     @mutex.synchronize do
       @buffer << message
     end
-    @flush_thread.kill if @flush_thread
+    @flush_thread&.kill
     if flush?
       flush
     else
